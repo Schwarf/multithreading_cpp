@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(data_structures C CXX)
+project(multithreading C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 99)
@@ -33,5 +33,8 @@ enable_cxx_compiler_flag_if_supported("-std=c++17")
 enable_cxx_compiler_flag_if_supported("-O0")
 
 
-add_executable(main
-        main.cpp)
+add_executable(main main.cpp)
+add_executable(basic basics/simple_thread.cpp)
+
+target_link_libraries(main)
+target_link_libraries(basic pthread)

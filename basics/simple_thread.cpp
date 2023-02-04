@@ -1,8 +1,8 @@
 //
-// Created by andreas on 03.02.23.
+// Created by andreas on 04.02.23.
 //
-
 #include <iostream>
+#include <thread>
 
 void hello()
 {
@@ -11,5 +11,6 @@ void hello()
 
 int main()
 {
-	hello();
+	std::thread t(hello);
+	t.join();
 }
