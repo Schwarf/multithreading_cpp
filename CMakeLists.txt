@@ -35,6 +35,8 @@ enable_cxx_compiler_flag_if_supported("-O0")
 
 add_executable(main main.cpp)
 add_executable(basic basics/simple_thread.cpp)
+add_executable(print basics/print_character.cpp)
 
 target_link_libraries(main)
 target_link_libraries(basic pthread)
+target_link_libraries(print pthread)
