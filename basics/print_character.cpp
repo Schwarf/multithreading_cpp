@@ -7,7 +7,6 @@
 #include <chrono>
 #include <random>
 #include <iostream>
-#include <exception>
 
 int print_character_at_random_time(char character)
 {
