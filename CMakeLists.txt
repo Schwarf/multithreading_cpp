@@ -57,5 +57,6 @@ target_link_libraries(trivial_deadlock pthread)
 target_link_libraries(try_out pthread)
 target_link_libraries(mutex pthread)
 target_link_libraries(stack_example pthread)
+target_link_libraries(thread_alarm pthread)
 
 #target_link_libraries(alarm_basic posix_misc pthreads)
