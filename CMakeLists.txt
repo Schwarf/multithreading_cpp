@@ -43,6 +43,7 @@ add_executable(stack_example basics/stack_example.cpp)
 
 add_executable(basic_alarm posix_threads/alarm/classic_alarm.cpp)
 add_executable(fork_alarm posix_threads/alarm/fork_alarm.cpp)
+add_executable(thread_alarm posix_threads/alarm/thread_alarm.cpp)
 
 add_library(containers INTERFACE basics/threadsafe_stack.h)
 add_library(posix_misc INTERFACE posix_threads/errors.h)
