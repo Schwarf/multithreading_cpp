@@ -34,7 +34,7 @@ enable_cxx_compiler_flag_if_supported("-O0")
 
 
 add_executable(main main.cpp)
-add_executable(basic basics/simple_thread.cpp posix_threads/thread_error_example.cpp)
+add_executable(basic basics/simple_thread.cpp posix_threads/thread_error_example.cpp posix_threads/lifecycle.cpp)
 add_executable(print basics/print_character.cpp)
 add_executable(trivial_deadlock basics/trivial_deadlock.cpp)
 add_executable(try_out basics/try_outs.cpp)
@@ -45,6 +45,7 @@ add_executable(basic_alarm posix_threads/alarm/classic_alarm.cpp)
 add_executable(fork_alarm posix_threads/alarm/fork_alarm.cpp)
 add_executable(thread_alarm posix_threads/alarm/thread_alarm.cpp)
 add_executable(thread_error posix_threads/thread_error_example.cpp)
+add_executable(lifecycle posix_threads/lifecycle.cpp)
 
 add_library(containers INTERFACE basics/threadsafe_stack.h)
 add_library(posix_misc INTERFACE posix_threads/errors.h)
@@ -60,5 +61,6 @@ target_link_libraries(mutex pthread)
 target_link_libraries(stack_example pthread)
 target_link_libraries(thread_alarm pthread)
 target_link_libraries(thread_error pthread)
+target_link_libraries(lifecycle pthread)
 
 #target_link_libraries(alarm_basic posix_misc pthreads)
