@@ -38,6 +38,7 @@ add_executable(mutex mutex_sample.cpp)
 add_executable(stack_example stack_example.cpp)
 add_executable(basic simple_thread.cpp)
 add_executable(print print_character.cpp)
+add_library(containers INTERFACE threadsafe_stack.h)
 
 target_link_libraries(basic pthread)
 target_link_libraries(print pthread)

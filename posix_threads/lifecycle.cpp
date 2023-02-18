@@ -25,8 +25,8 @@ int main()
 	if (status)
 		err_abort(status, "Error in join thread");
 	status = pthread_join(thread_id, &result);
-	if (status)
-		err_abort(status, "Error in join thread2 ");
+//	if (status)
+//		err_abort(status, "Error in join thread2 ");
 	if (result == nullptr)
 		return 0;
 	else
