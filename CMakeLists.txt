@@ -44,6 +44,8 @@ add_executable(stack_example basics/stack_example.cpp)
 add_executable(basic_alarm posix_threads/alarm/classic_alarm.cpp)
 add_executable(fork_alarm posix_threads/alarm/fork_alarm.cpp)
 add_executable(thread_alarm posix_threads/alarm/thread_alarm.cpp)
+add_executable(mutex_alarm posix_threads/alarm/mutex_alarm.cpp)
+
 add_executable(thread_error posix_threads/thread_error_example.cpp)
 add_executable(lifecycle posix_threads/lifecycle.cpp)
 
