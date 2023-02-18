@@ -41,7 +41,7 @@ void *alarm_thread(void *arguments)
 				else
 					sleep_time = alarm->time - now;
 #ifdef DEBUG
-		printf("[waiting: %d(%d)\"%s\"]\n"), alarm_time, sleep_time, alarm->message);
+		printf("[waiting: %d(%d)\"%s\"]\n", alarm->time, sleep_time, alarm->message);
 #endif
 		}
 		status = pthread_mutex_unlock(&alarm_mutex);

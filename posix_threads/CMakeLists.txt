@@ -35,7 +35,7 @@ enable_cxx_compiler_flag_if_supported("-O0")
 
 
 add_executable(thread_error thread_error_example.cpp)
-add_executable(lifecycle lifecycle.cpp)
+add_executable(lifecycle lifecycle.cpp mutex/trylock.cpp)
 
 add_library(posix_misc INTERFACE errors.h)
 
