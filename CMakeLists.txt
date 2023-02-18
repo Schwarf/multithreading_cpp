@@ -64,5 +64,6 @@ target_link_libraries(stack_example pthread)
 target_link_libraries(thread_alarm pthread)
 target_link_libraries(thread_error pthread)
 target_link_libraries(lifecycle pthread)
+target_link_libraries(mutex_alarm pthread)
 
 #target_link_libraries(alarm_basic posix_misc pthreads)
