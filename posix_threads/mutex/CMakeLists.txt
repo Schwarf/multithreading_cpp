@@ -40,6 +40,9 @@ add_executable(backoff backoff_algorithm.cpp)
 add_library(posix_misc INTERFACE ./../errors.h)
 
 include_directories(./../)
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+    add_definitions(-DDEBUG)
+endif()
 
 target_link_libraries(try_lock pthread)
 target_link_libraries(backoff pthread)
