@@ -8,13 +8,13 @@
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-long counter;
+long counter{};
 
 time_t end_time;
 
 void *counter_thread(void *arg)
 {
-	int status;
+	int status{};
 	int spin;
 	while (time(nullptr) < end_time) {
 		status = pthread_mutex_lock(&mutex);
@@ -33,7 +33,7 @@ void *counter_thread(void *arg)
 
 void *monitor_thread(void *arg)
 {
-	int status;
+	int status{};
 	int misses{};
 	while (time(nullptr) < end_time) {
 		sleep(3);
@@ -55,10 +55,10 @@ void *monitor_thread(void *arg)
 
 int main(int number_of_arguments, char *argument_list[])
 {
-	int status;
+	int status{};
 
-	pthread_t counter_thread_id;
-	pthread_t monitor_thread_id;
+	pthread_t counter_thread_id{};
+	pthread_t monitor_thread_id{};
 
 	end_time = time(nullptr) + 60;
 	status = pthread_create (
