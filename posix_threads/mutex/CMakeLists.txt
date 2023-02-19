@@ -35,10 +35,12 @@ enable_cxx_compiler_flag_if_supported("-O0")
 
 
 add_executable(try_lock trylock.cpp)
+add_executable(backoff backoff_algorithm.cpp)
 
 add_library(posix_misc INTERFACE ./../errors.h)
 
 include_directories(./../)
 
 target_link_libraries(try_lock pthread)
+target_link_libraries(backoff pthread)
 
