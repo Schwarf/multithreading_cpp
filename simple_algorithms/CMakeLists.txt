@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
-project(multithreading C CXX)
+project(simple_multithreading_algos C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
 include(CheckCXXCompilerFlag)
 
@@ -33,17 +33,11 @@ enable_cxx_compiler_flag_if_supported("-std=c++17")
 enable_cxx_compiler_flag_if_supported("-O0")
 
 
+add_library(algos INTERFACE binary_search.h)
 
-add_executable(try_lock trylock.cpp)
-add_executable(backoff backoff_algorithm.cpp ../../simple_algorithms/binary_search.h)
+include_directories(.)
 
-add_library(posix_misc INTERFACE ./../errors.h)
+target_link_libraries(lifecycle pthread)
+target_link_libraries(thread_error pthread)
 
-include_directories(./../)
-if (CMAKE_BUILD_TYPE MATCHES Debug)
-    add_definitions(-DDEBUG)
-endif()
-
-target_link_libraries(try_lock pthread)
-target_link_libraries(backoff pthread)
-
+#target_link_libraries(alarm_basic posix_misc pthreads)
