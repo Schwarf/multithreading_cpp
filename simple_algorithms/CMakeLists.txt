@@ -32,12 +32,11 @@ enable_cxx_compiler_flag_if_supported("-pedantic")
 enable_cxx_compiler_flag_if_supported("-std=c++17")
 enable_cxx_compiler_flag_if_supported("-O0")
 
-
+add_executable(main main.cpp)
 add_library(algos INTERFACE binary_search.h)
 
 include_directories(.)
 
-target_link_libraries(lifecycle pthread)
-target_link_libraries(thread_error pthread)
+target_link_libraries(main pthread)
 
 #target_link_libraries(alarm_basic posix_misc pthreads)
