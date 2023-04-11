@@ -8,7 +8,10 @@
 #include <vector>
 
 template<typename T>
-long long binary_search(const std::vector<T> &input, long long left, long long right, const T &target) requires std::is_integral_v<T>
+long long binary_search(const std::vector<T> &input,
+						long long left,
+						long long right,
+						const T &target) requires std::is_integral_v<T>
 {
 	while (left <= right) {
 		long long mid = (left + right) / 2;
@@ -19,13 +22,13 @@ long long binary_search(const std::vector<T> &input, long long left, long long r
 		if (input[mid] > target)
 			right = mid - 1;
 	}
-	return input[right] == target? right : -1;
+	return input[right] == target ? right : -1;
 }
 
 template<typename T>
 int parallel_binary_search(const std::vector<T> &input,
-						   long long left,
-						   long long right,
+						   int left,
+						   int right,
 						   const T &target,
 						   int number_of_threads) requires std::is_integral_v<T>
 {
@@ -33,14 +36,16 @@ int parallel_binary_search(const std::vector<T> &input,
 	std::vector<std::thread> threads;
 	std::vector<T> results(number_of_threads, {});
 	for (int i{}; i < number_of_threads; ++i) {
-		threads.emplace_back([&, i]() {
-			long long start = left + i * ((right - left+ 1) / number_of_threads);
-			long long end = i == number_of_threads - 1 ? right : start + ((right - left + 1) / number_of_threads) - 1;
-			results[i] = binary_search(input, start, end, target);
-		});
+		threads.emplace_back([&, i]()
+							 {
+								 int start = left + i * ((right - left + 1) / number_of_threads);
+								 int end = i == number_of_threads - 1 ? right : start
+									 + ((right - left + 1) / number_of_threads) - 1;
+								 results[i] = binary_search(input, start, end, target);
+							 });
 
 	}
-	for (auto& t : threads) {
+	for (auto &t: threads) {
 		t.join(); // Wait for all threads to finish
 	}
 
