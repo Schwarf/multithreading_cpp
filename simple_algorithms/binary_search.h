@@ -8,13 +8,10 @@
 #include <vector>
 
 template<typename T>
-long long binary_search(const std::vector<T> &input,
-						long long left,
-						long long right,
-						const T &target) requires std::is_integral_v<T>
+T binary_search(const std::vector<T> &input, int left, int right, const T &target) requires std::is_integral_v<T>
 {
 	while (left <= right) {
-		long long mid = (left + right) / 2;
+		int mid = (left + right) / 2;
 		if (input[mid] == target)
 			return mid;
 		if (input[mid] < target)
