@@ -5,15 +5,8 @@
 #include <memory>
 #include <mutex>
 #include <stack>
-struct EmptyStack: std::exception
-{
-	[[nodiscard]] const char *what() const throw() override
-	{
-		return "Thread-Safe stack is empty";
-	}
-};
 
-template <typename T>
+template<typename T>
 class ThreadSafeStack
 {
 private:
@@ -21,18 +14,18 @@ private:
 	mutable std::mutex mutex_;
 public:
 	ThreadSafeStack() = default;
-	ThreadSafeStack(const ThreadSafeStack & other)
+	ThreadSafeStack(const ThreadSafeStack &other)
 	{
 		std::lock_guard<std::mutex> lock(other.mutex_);
 		data_ = other.data_;
 	}
-	ThreadSafeStack & operator = (const ThreadSafeStack &) = delete;
-	void push(const T & value)
+	ThreadSafeStack &operator=(const ThreadSafeStack &) = delete;
+	void push(const T &value)
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
 		data_.push(value);
 	}
-	void push(T && value)
+	void push(T &&value)
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
 		data_.push(value);
@@ -40,20 +33,21 @@ public:
 	std::shared_ptr<T> pop()
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
-		if(data_.empty())
-			throw EmptyStack();
+		if (data_.empty())
+			return nullptr;
 		std::shared_ptr<T> const result(std::make_shared<T>(data_.top()));
 		data_.pop();
 		return result;
 	}
 
-	void pop(T & value)
+	bool pop(T &value)
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
-		if(data_.empty())
-			throw EmptyStack();
+		if (data_.empty())
+			return false;
 		value = data_.top();
 		data_.pop();
+		return true;
 	}
 
 	bool empty() const

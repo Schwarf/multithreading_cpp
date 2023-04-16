@@ -32,6 +32,8 @@ enable_cxx_compiler_flag_if_supported("-pedantic")
 enable_cxx_compiler_flag_if_supported("-std=c++17")
 enable_cxx_compiler_flag_if_supported("-O0")
 
+add_subdirectory(test)
+
 add_executable(trivial_deadlock trivial_deadlock.cpp)
 add_executable(try_out try_outs.cpp)
 add_executable(mutex mutex_sample.cpp)
