@@ -39,7 +39,7 @@ add_executable(try_out try_outs.cpp)
 add_executable(mutex mutex_sample.cpp)
 add_executable(basic simple_thread.cpp)
 add_executable(print print_character.cpp)
-add_library(containers INTERFACE thread_safe_stack.h)
+add_library(containers INTERFACE thread_safe_stack.h thread_safe_list.h)
 
 target_link_libraries(basic pthread)
 target_link_libraries(print pthread)
