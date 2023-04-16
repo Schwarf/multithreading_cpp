@@ -5,10 +5,12 @@
 #include <memory>
 #include <mutex>
 #include <stack>
-
-struct EmptyThreadSafeStack : std::exception
+struct EmptyStack: std::exception
 {
-	const char* what() const throw();
+	[[nodiscard]] const char *what() const throw() override
+	{
+		return "Thread-Safe stack is empty";
+	}
 };
 
 template <typename T>
@@ -39,7 +41,7 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
 		if(data_.empty())
-			throw EmptyThreadSafeStack();
+			throw EmptyStack();
 		std::shared_ptr<T> const result(std::make_shared<T>(data_.top()));
 		data_.pop();
 		return result;
@@ -49,7 +51,7 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
 		if(data_.empty())
-			throw EmptyThreadSafeStack();
+			throw EmptyStack();
 		value = data_.top();
 		data_.pop();
 	}
