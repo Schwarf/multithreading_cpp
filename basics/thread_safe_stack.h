@@ -19,6 +19,8 @@ public:
 		std::lock_guard<std::mutex> lock(other.mutex_);
 		data_ = other.data_;
 	}
+	// Delete the copy-assignment since in a copy another mutex is used which can lead to race conditions
+	// if the two instances are accessed concurrently
 	ThreadSafeStack &operator=(const ThreadSafeStack &) = delete;
 	void push(const T &value)
 	{
