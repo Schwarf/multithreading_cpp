@@ -12,10 +12,10 @@
 TEST(SetupThreadSafeStackTest, test_push_and_pop)
 {
 	int run_test{100};
+	constexpr int number_of_threads{10};
+	constexpr int number_of_operations{10000};
 	for (int run{}; run < run_test; run++) {
 		ThreadSafeStack<int> stack;
-		constexpr int number_of_threads{10};
-		constexpr int number_of_operations{10000};
 		std::vector<std::thread> threads;
 		for (int i = 0; i < number_of_threads; ++i) {
 			threads.emplace_back([&stack, number_of_operations]()
@@ -38,10 +38,10 @@ TEST(SetupThreadSafeStackTest, test_push_and_pop)
 TEST(ThreadSafeStackTest, test_push_and_pop_check_values)
 {
 	int run_test{100};
+	constexpr int number_of_threads{10};
+	constexpr int number_of_operations{1000};
 	for (int run{}; run < run_test; run++) {
 
-		constexpr int number_of_threads{10};
-		constexpr int number_of_operations{1000};
 		ThreadSafeStack<int> stack;
 		std::vector<int> input(number_of_operations);
 		std::iota(input.begin(), input.end(), 0);
@@ -86,13 +86,12 @@ TEST(SetupThreadSafeStackTest, test_push_and_size)
 	std::random_device random_device;
 	std::default_random_engine random_engine(random_device());
 	std::uniform_int_distribution<int> random_distribution(0, 100);
+	constexpr int number_of_threads{4};
+	constexpr int number_of_operations{100};
 
 	int run_test{1000};
 	for (int run{}; run < run_test; run++) {
 		ThreadSafeStack<int> stack;
-		constexpr int number_of_threads{4};
-		constexpr int number_of_operations{100};
-
 		std::vector<std::thread> threads;
 
 		for (int i = 0; i < number_of_threads; ++i) {
@@ -106,12 +105,12 @@ TEST(SetupThreadSafeStackTest, test_push_and_size)
 			thread.join();
 		}
 		threads.clear();
-		ASSERT_EQ(stack.size(), number_of_operations*number_of_threads);
+		ASSERT_EQ(stack.size(), number_of_operations * number_of_threads);
 		int random_number_of_pops = random_distribution(random_engine);
 		for (int i = 0; i < number_of_threads; ++i) {
 			threads.emplace_back([&stack, random_number_of_pops]()
 								 {
-									int value;
+									 int value;
 									 for (int j = 0; j < random_number_of_pops; ++j)
 										 stack.pop(value);
 								 });
@@ -119,6 +118,12 @@ TEST(SetupThreadSafeStackTest, test_push_and_size)
 		for (auto &thread: threads) {
 			thread.join();
 		}
-		ASSERT_EQ(stack.size(), number_of_operations*number_of_threads - number_of_threads*random_number_of_pops);
+		ASSERT_EQ(stack.size(), number_of_operations * number_of_threads - number_of_threads * random_number_of_pops);
+		if (!stack.size())
+			ASSERT_TRUE(stack.empty());
+		else
+			ASSERT_TRUE(!stack.empty());
 	}
 }
+
+
