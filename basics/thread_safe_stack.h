@@ -58,7 +58,7 @@ public:
 		return data_.empty();
 	}
 
-	bool size() const
+	size_t size() const
 	{
 		std::lock_guard<std::mutex> lock(mutex_);
 		return data_.size();

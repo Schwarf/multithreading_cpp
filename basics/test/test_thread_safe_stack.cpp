@@ -4,6 +4,7 @@
 
 #include <thread>
 #include <numeric>
+#include <random>
 #include "gtest/gtest.h"
 #include "thread_safe_stack.h"
 
@@ -76,5 +77,48 @@ TEST(ThreadSafeStackTest, test_push_and_pop_check_values)
 		std::sort(result_values.begin(), result_values.end());
 		std::sort(expected_values.begin(), expected_values.end());
 		ASSERT_EQ(result_values, expected_values);
+	}
+}
+
+
+TEST(SetupThreadSafeStackTest, test_push_and_size)
+{
+	std::random_device random_device;
+	std::default_random_engine random_engine(random_device());
+	std::uniform_int_distribution<int> random_distribution(0, 100);
+
+	int run_test{1000};
+	for (int run{}; run < run_test; run++) {
+		ThreadSafeStack<int> stack;
+		constexpr int number_of_threads{4};
+		constexpr int number_of_operations{100};
+
+		std::vector<std::thread> threads;
+
+		for (int i = 0; i < number_of_threads; ++i) {
+			threads.emplace_back([&stack, number_of_operations]()
+								 {
+									 for (int j = 0; j < number_of_operations; ++j)
+										 stack.push(j);
+								 });
+		}
+		for (auto &thread: threads) {
+			thread.join();
+		}
+		threads.clear();
+		ASSERT_EQ(stack.size(), number_of_operations*number_of_threads);
+		int random_number_of_pops = random_distribution(random_engine);
+		for (int i = 0; i < number_of_threads; ++i) {
+			threads.emplace_back([&stack, random_number_of_pops]()
+								 {
+									int value;
+									 for (int j = 0; j < random_number_of_pops; ++j)
+										 stack.pop(value);
+								 });
+		}
+		for (auto &thread: threads) {
+			thread.join();
+		}
+		ASSERT_EQ(stack.size(), number_of_operations*number_of_threads - number_of_threads*random_number_of_pops);
 	}
 }
