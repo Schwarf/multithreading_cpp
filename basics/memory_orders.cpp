@@ -11,27 +11,30 @@ std::atomic<int> z;
 
 void write_x()
 {
-	x.store(true, std::memory_order_seq_cst);
+	x.store(true, std::memory_order_relaxed);
 }
 void write_y()
 {
-	y.store(true, std::memory_order_seq_cst);
+	y.store(true, std::memory_order_relaxed);
 }
 void read_x_then_y()
 {
-	while (!x.load(std::memory_order_seq_cst));
-	if (y.load(std::memory_order_seq_cst))
+	while (!x.load(std::memory_order_relaxed));
+	if (y.load(std::memory_order_relaxed))
 		++z;
 }
 void read_y_then_x()
 {
-	while (!y.load(std::memory_order_seq_cst));
-	if (x.load(std::memory_order_seq_cst))
+	while (!y.load(std::memory_order_relaxed));
+	if (x.load(std::memory_order_relaxed))
 		++z;
 }
 int main()
 {
-	for (int i{}; i < 1000; ++i) {
+	int count0{};
+	int count1{};
+	int count2{};
+	for (int i{}; i < 10000; ++i) {
 		x = false;
 		y = false;
 		z = 0;
@@ -44,6 +47,15 @@ int main()
 		c.join();
 		d.join();//
 		//	assert(z.load()!=0);
-		std::cout << z.load() << std::endl;
+
+		if(!z.load())
+			count0++;
+		if(z.load() == 1)
+			count1++;
+		if(z.load() == 2)
+			count2++;
 	}
+	std::cout << "0 count: "<< count0 << std::endl;
+	std::cout << "1 count: "<< count1 << std::endl;
+	std::cout << "2 count: "<< count2 << std::endl;
 }
