@@ -13,9 +13,11 @@ class LockFreeStack
 private:
 	struct Node
 	{
+
 		std::shared_ptr<T> value_;
 		Node * next;
 		Node(T const & value)
+		// We allocate the data on the heap in the Node
 		: value_(std::make_shared<T>(value)){}
 	};
 	std::atomic<Node*> head;
@@ -26,6 +28,13 @@ public:
 		new_node->next = head->load();
 		// Typically use 'compare_exchange_weak' in a loop because in can fail spuriously
 		while(!head.compare_exchange_weak(new_node->next, new_node));
+	}
+
+	std::shared_ptr<T> popo()
+	{
+		Node* current_head = head.load();
+		while(current_head &&  !head.compare_exchange_weak(current_head, current_head->next));
+		return current_head ? current_head->value_ : nullptr;
 	}
 
 };
