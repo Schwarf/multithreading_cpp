@@ -16,9 +16,11 @@ private:
 
 		std::shared_ptr<T> value_;
 		Node * next;
-		Node(T const & value)
+		explicit Node(T const & value)
 		// We allocate the data on the heap in the Node
-		: value_(std::make_shared<T>(value)){}
+		: value_(std::make_shared<T>(value)),
+		next(nullptr)
+		{}
 	};
 	std::atomic<Node *> head;
 	std::atomic<unsigned int> number_of_threads_in_pop{};
