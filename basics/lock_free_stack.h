@@ -5,6 +5,7 @@
 #ifndef LOCK_FREE_STACK_H
 #define LOCK_FREE_STACK_H
 #include <atomic>
+#include <memory>
 
 template <typename T>
 class LockFreeStack
@@ -12,10 +13,10 @@ class LockFreeStack
 private:
 	struct Node
 	{
-		T value_;
+		std::shared_ptr<T> value_;
 		Node * next;
 		Node(T const & value)
-		: value_(value){}
+		: value_(std::make_shared<T>(value)){}
 	};
 	std::atomic<Node*> head;
 public:
