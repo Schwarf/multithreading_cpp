@@ -20,7 +20,7 @@ private:
 		// We allocate the data on the heap in the Node
 		: value_(std::make_shared<T>(value)){}
 	};
-	std::atomic<Node*> head;
+	std::atomic<Node *> head;
 	std::atomic<unsigned int> number_of_threads_in_pop{};
 	std::atomic<Node*> to_be_deleted;
 	static void delete_nodes(Node * node)
@@ -40,7 +40,7 @@ private:
 		{
 			last = next;
 		}
-		chain_pending_nodes_for_deletion(node, last);
+		chain_nodes_for_deletion(node, last);
 	}
 
 	void chain_nodes_for_deletion(Node * first, Node* last)
@@ -65,38 +65,39 @@ private:
 			}
 			else if(nodes_to_be_deleted)
 			{
-				chain_pending_nodes(nodes_to_be_deleted);
+				chain_nodes_for_deletion(nodes_to_be_deleted);
 			}
 			delete old_head;
 		}
 		else
 		{
-			chain_pending_nodes(old_head);
+			chain_single_node_for_deletion(old_head);
 			--number_of_threads_in_pop;
 		}
 	}
 	
 
 public:
-	void push(T const & new_value)
+	void push(const T & new_value)
 	{
 		Node * const new_node = new Node(new_value);
-		new_node->next = head->load();
+		new_node->next = head.load();
 		// Typically use 'compare_exchange_weak' in a loop because in can fail spuriously
 		while(!head.compare_exchange_weak(new_node->next, new_node));
 	}
 
-	std::shared_ptr<T> popo()
+	std::shared_ptr<T> pop()
 	{
 		++number_of_threads_in_pop;
-		Node* current_head = head.load();
-		while(current_head &&  !head.compare_exchange_weak(current_head, current_head->next));
+		Node* old_head = head.load();
+		while(old_head &&  !head.compare_exchange_weak(old_head, old_head->next));
 		std::shared_ptr<T> result;
-		if(current_head)
+		if(old_head)
 		{
-			result.swap(current_head->value);
+			result.swap(old_head->value_);
 		}
-		return current_head ? current_head->value_ : nullptr;
+		try_reclaim_memory(old_head);
+		return result;
 	}
 
 };
