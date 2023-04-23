@@ -41,7 +41,7 @@ add_executable(basic simple_thread.cpp)
 add_executable(print print_character.cpp)
 add_executable(memory_order memory_orders.cpp)
 add_executable(memory_order2 memory_orders2.cpp)
-add_library(containers INTERFACE thread_safe_stack.h thread_safe_list.h)
+add_library(containers INTERFACE thread_safe_stack.h thread_safe_list.h lock_free_stack.h)
 
 target_link_libraries(basic pthread)
 target_link_libraries(print pthread)
