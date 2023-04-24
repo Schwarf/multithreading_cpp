@@ -7,6 +7,34 @@
 #include <atomic>
 #include <memory>
 #include <stack>
+#include <thread>
+
+constexpr unsigned int maximum_number_of_threads{24};
+
+struct HazardPointer
+{
+	std::atomic<std::thread::id> thread_id;
+	std::atomic<void*> pointer;
+};
+
+HazardPointer hazard_pointers[maximum_number_of_threads];
+
+class HazardPointerOwner
+{
+private:
+	HazardPointer * hazard_pointer;
+public:
+	HazardPointerOwner(const HazardPointer & rhs) = delete;
+	HazardPointerOwner operator=(const HazardPointer & rhs) = delete;
+	HazardPointerOwner():
+	hazard_pointer(nullptr)
+	{
+		for(unsigned int i=0)
+	}
+
+};
+
+
 template <typename T>
 class LockFreeStack
 {
