@@ -9,7 +9,7 @@
 #include "thread_safe_stack.h"
 
 
-TEST(SetupThreadSafeStackTest, test_push_and_pop)
+TEST(ThreadSafeStackTest, test_push_and_pop)
 {
 	int run_test{100};
 	constexpr int number_of_threads{10};
@@ -81,7 +81,7 @@ TEST(ThreadSafeStackTest, test_push_and_pop_check_values)
 }
 
 
-TEST(SetupThreadSafeStackTest, test_push_and_size)
+TEST(ThreadSafeStackTest, test_push_and_size)
 {
 	std::random_device random_device;
 	std::default_random_engine random_engine(random_device());

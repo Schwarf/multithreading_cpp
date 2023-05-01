@@ -29,7 +29,6 @@ public:
 	HazardPointerOwner():
 	hazard_pointer(nullptr)
 	{
-		for(unsigned int i=0)
 	}
 
 };
