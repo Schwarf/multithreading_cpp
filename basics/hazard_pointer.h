@@ -2,8 +2,8 @@
 // Created by andreas on 24.04.23.
 //
 
-#ifndef HP_H
-#define HP_H
+#ifndef HAZARD_POINTER_H
+#define HAZARD_POINTER_H
 #include <atomic>
 #include <vector>
 #include <thread>
@@ -97,4 +97,4 @@ private:
 };
 
 
-#endif //HP_H
+#endif //HAZARD_POINTER_H
