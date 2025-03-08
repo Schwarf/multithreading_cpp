@@ -30,7 +30,7 @@ public:
 	{
 		std::unique_lock<std::mutex> lock(mutex_);
 		condition_.wait(lock, [this]
-		{ return !data_.empty(); });
+		{ return !data_.empty(); });	
 		value = data_.front();
 		data_.pop();
 	}

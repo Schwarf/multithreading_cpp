@@ -79,3 +79,51 @@ TEST(ThreadSafeQueue, test_push_and_try_pop_check_values)
 		ASSERT_EQ(result_values, expected_values);
 	}
 }
+
+TEST(ThreadSafeQueue, test_push_and_wait_and_pop)
+{
+	constexpr int number_of_operations{1000};
+	std::vector<int> input(number_of_operations);
+	std::iota(input.begin(), input.end(), 0);
+	ThreadSafeQueue<int> queue;
+	std::vector<std::thread> threads;
+	auto data_preparation_thread = [&input, &queue]()
+	{
+		while(!input.empty())
+		{
+			int const data = input.back();
+			input.pop_back();
+			queue.push(data);
+		}
+	};
+	auto process = [](int data)
+	{
+		return data*data;
+	};
+	std::vector<int> output;
+	auto data_processing_thread = [&queue, &process, &output]()
+	{
+		while(true)
+		{
+			int data;
+			queue.wait_and_pop(data);
+			auto output_data = process(data);
+			output.push_back(output_data);
+			if(data >=999)
+				break;
+		}
+	};
+	threads.emplace_back(data_preparation_thread);
+	threads.emplace_back(data_processing_thread);
+	for (auto &thread: threads) {
+		thread.join();
+	}
+	std::reverse(output.begin(), output.end());
+	for(int i{}; i < number_of_operations; ++i)
+	{
+		std::cout << i <<"  "<< input[i] << "  " << output[i] << std::endl;
+		EXPECT_EQ(input[i]*input[i], output[i]);
+	}
+	EXPECT_TRUE(true);
+
+}
