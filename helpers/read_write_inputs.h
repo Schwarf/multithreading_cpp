@@ -13,7 +13,7 @@ std::vector<std::vector<int>> generate_random_vectors(const std::vector<int>& ve
 {
     std::vector<std::vector<int>> vectors(vector_sizes.size());
     std::mt19937 gen(seed);
-    std::uniform_int_distribution<int> dist(0, 1000000);
+    std::uniform_int_distribution<int> dist(0, 1000000000) ;
 
     for (const auto size : vector_sizes)
     {

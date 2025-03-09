@@ -33,3 +33,5 @@ text.h
 *.exe
 *.out
 *.app
+
+*.bin

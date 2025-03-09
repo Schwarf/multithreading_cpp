@@ -7,5 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(test)
 
+add_executable(generate_inputs generate_randomized_inputs.cpp)
 add_library(read_write_inputs INTERFACE read_write_inputs.h)
+
 
