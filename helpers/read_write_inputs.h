@@ -9,11 +9,11 @@
 
 // Generates random vectors of integers.
 std::vector<std::vector<int>> generate_random_vectors(const std::vector<int>& vector_sizes,
-                                                    unsigned seed = std::random_device{}())
+                                                      unsigned seed = std::random_device{}())
 {
     std::vector<std::vector<int>> vectors(vector_sizes.size());
     std::mt19937 gen(seed);
-    std::uniform_int_distribution<int> dist(0, 1000000000) ;
+    std::uniform_int_distribution<int> dist(0, 1000000000);
 
     for (const auto size : vector_sizes)
     {
@@ -51,10 +51,12 @@ void write_vectors_to_file(const std::string& filename, const std::vector<std::v
 }
 
 
-std::vector<std::vector<int>> read_vectors_from_file(const std::string& filename) {
+std::vector<std::vector<int>> read_vectors_from_file(const std::string& filename)
+{
     std::vector<std::vector<int>> vectors;
     std::ifstream input_file_stream(filename, std::ios::binary);
-    if (!input_file_stream) {
+    if (!input_file_stream)
+    {
         std::cerr << "Error opening file for reading: " << filename << "\n";
         return vectors;
     }
@@ -64,7 +66,8 @@ std::vector<std::vector<int>> read_vectors_from_file(const std::string& filename
     vectors.resize(numVectors);
 
     // Read each vector.
-    for (size_t i = 0; i < numVectors; ++i) {
+    for (size_t i = 0; i < numVectors; ++i)
+    {
         size_t current_vector_size;
         input_file_stream.read(reinterpret_cast<char*>(&current_vector_size), sizeof(current_vector_size));
         vectors[i].resize(current_vector_size);
@@ -72,4 +75,3 @@ std::vector<std::vector<int>> read_vectors_from_file(const std::string& filename
     }
     return vectors;
 }
-
