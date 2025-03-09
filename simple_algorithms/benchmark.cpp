@@ -27,6 +27,7 @@ static void generic_sorting_benchmark(benchmark::State& state, const std::functi
 
 
 BENCHMARK_CAPTURE(generic_sorting_benchmark<int>, merge_sort, merge_sort<int>)->RangeMultiplier(10)->Range(1000, 100000);
+BENCHMARK_CAPTURE(generic_sorting_benchmark<int>, merge_sort_multi, merge_sort_multi<int>)->RangeMultiplier(10)->Range(1000, 100000);
 
 int main(int argc, char** argv) {
     // Compiler check
