@@ -8,7 +8,7 @@
 #include <string>
 
 // Generates random vectors of integers.
-std::vector<std::vector<int>> generateRandomVectors(const std::vector<int>& vector_sizes,
+std::vector<std::vector<int>> generate_random_vectors(const std::vector<int>& vector_sizes,
                                                     unsigned seed = std::random_device{}())
 {
     std::vector<std::vector<int>> vectors(vector_sizes.size());
@@ -73,45 +73,3 @@ std::vector<std::vector<int>> read_vectors_from_file(const std::string& filename
     return vectors;
 }
 
-int main()
-{
-    // Configuration for random vectors.
-    const std::string filename = "random_vectors.bin";
-    std::vector<int> vector_sizes{10, 100, 1000, 10000, 100000, 1000000};
-    // 1. Generate random vectors.
-    auto vectors = generateRandomVectors(vector_sint main()
-{
-    // Configuration for random vectors.
-    const std::string filename = "random_vectors.bin";
-    std::vector<int> vector_sizes{10, 100, 1000, 10000, 100000, 1000000};
-    // 1. Generate random vectors.
-    auto vectors = generateRandomVectors(vector_sizes);
-
-    // 2. Save them to disk.
-    write_vectors_to_file(filename, vectors);
-    auto read_vectors = read_vectors_from_file(filename);
-    for(int i{}; i < vectors.size(); ++i)
-    {
-        for(int j{}; j < vectors[i].size(); ++j)
-        {
-
-        }
-    }
-    std::cout << "Saved vectors to file: " << filename << "\n";
-    return 0;
-}
-izes);
-
-    // 2. Save them to disk.
-    write_vectors_to_file(filename, vectors);
-    auto read_vectors = read_vectors_from_file(filename);
-    for(int i{}; i < vectors.size(); ++i)
-    {
-        for(int j{}; j < vectors[i].size(); ++j)
-        {
-
-        }
-    }
-    std::cout << "Saved vectors to file: " << filename << "\n";
-    return 0;
-}
