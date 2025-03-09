@@ -2,6 +2,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.22)
 project(benchmark)
 
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 # Default to Release build type if none is specified
@@ -16,9 +18,10 @@ find_package(GTest REQUIRED)
 find_package(benchmark REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-add_executable(sort_benchmark benchmark.cpp)
-add_executable(sort_profiling profiling.cpp)
+add_executable(main main.cpp)
+add_executable(benchmark benchmark.cpp)
 
-target_link_libraries(sort_benchmark benchmark::benchmark)
-target_compile_options(sort_benchmark PRIVATE $<$<CONFIG:Release>:-O3>)
-target_compile_options(sort_profiling PRIVATE $<$<CONFIG:Release>:-O3>)
+target_link_libraries(main benchmark::benchmark)
+target_link_libraries(benchmark benchmark::benchmark)
+target_compile_options(main PRIVATE $<$<CONFIG:Release>:-O3>)
+target_compile_options(benchmark PRIVATE $<$<CONFIG:Release>:-O3>)
