@@ -30,10 +30,10 @@ class LockFreeHashTable {
   }
 
   bool insert(KeyValueType key, KeyValueType value) {
-    size_t hash = hash(key);
+    size_t hash_value = hash(key);
     size_t slots_examined{};
     while(slots_examined < TableSize){
-      auto & entry = table[hash];
+      auto & entry = table[hash_value];
       KeyValueType expected = NO_KEY;
       if(entry.key.load(std::memory_order_acquire) == NO_KEY){
         if(entry.key.compare_exchange_strong(expected, key, std::memory_order_acq_rel)){
@@ -45,16 +45,16 @@ class LockFreeHashTable {
           return true;
       }
       ++slots_examined;
-      hash = (hash + 1) % TableSize;
+      hash_value = (hash_value + 1) % TableSize;
     }
     return false;
   }
 
   KeyValueType lookup(KeyValueType key) const {
-    size_t hash = hash(key);
+    size_t hash_value = hash(key);
     size_t slots_examined{};
     while(slots_examined < TableSize){
-      const auto & entry = table[hash];
+      const auto & entry = table[hash_value];
       auto entry_key = entry.key.load(std::memory_order_acquire);
       if(entry_key == NO_KEY){
           return NO_VALUE;
@@ -65,7 +65,7 @@ class LockFreeHashTable {
         return (entry_value != NO_VALUE) ? entry_value : NO_VALUE;
       }
       ++slots_examined;
-      hash = (hash + 1) % TableSize;
+      hash_value = (hash_value + 1) % TableSize;
     }
     return NO_VALUE;
   }
