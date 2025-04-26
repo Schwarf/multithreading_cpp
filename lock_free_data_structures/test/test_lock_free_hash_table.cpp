@@ -7,7 +7,7 @@
 #include "./../lock_free_hash_table.h"
 #include "gtest/gtest.h"
 
-using HashTable = LockFreeHashTable<int64_t, -1, -1, 1024>;
+using HashTable = LockFreeHashTable<int64_t, int32_t, -1, -1, 1024>;
 
 TEST(TestLockFreeHashTable, InsertAndLookupSingleThread)
 {

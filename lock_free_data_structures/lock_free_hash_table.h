@@ -8,22 +8,21 @@
 // This implementation is for the purpose of solving dynamic programming problems using
 // a parallelized top-down approach
 #include <atomic>
-#include <cstdint>
 #include <vector>
-
 // The hash-table size is allocated once at compile time and it uses a simple modular hash.
 // This requires that the problem size (number of hash values) must be estimated before.
-template <typename KeyValueType, KeyValueType NO_KEY, KeyValueType NO_VALUE, size_t TableSize>
+
+template <typename KeyType, typename ValueType, KeyType NO_KEY, ValueType NO_VALUE, size_t TableSize>
+requires std::is_integral_v<KeyType> && std::is_trivially_copyable_v<ValueType>
 class LockFreeHashTable
 {
 public:
-    static constexpr KeyValueType no_key = NO_KEY;
-    static constexpr KeyValueType no_value = NO_VALUE;
-
+    static constexpr KeyType no_key = NO_KEY;
+    static constexpr ValueType no_value = NO_VALUE;
     struct Entry
     {
-        std::atomic<KeyValueType> key;
-        std::atomic<KeyValueType> value;
+        std::atomic<KeyType> key;
+        std::atomic<ValueType> value;
     };
 
     LockFreeHashTable() : table(TableSize)
@@ -31,18 +30,18 @@ public:
         for (size_t i = 0; i < TableSize; i++)
         {
             table[i].key.store(NO_KEY, std::memory_order_relaxed);
-            table[i].value.store(NO_VALUE, std::memory_order_relaxed);
+            table[i].value.store(no_value, std::memory_order_relaxed);
         }
     }
 
-    bool insert(KeyValueType key, KeyValueType value)
+    bool insert(KeyType key, ValueType value)
     {
         size_t hash_value = hash(key);
         size_t slots_examined{};
         while (slots_examined < TableSize)
         {
             auto& entry = table[hash_value];
-            KeyValueType expected = NO_KEY;
+            KeyType expected = NO_KEY;
             if (entry.key.load(std::memory_order_acquire) == NO_KEY)
             {
                 if (entry.key.compare_exchange_strong(expected, key, std::memory_order_acq_rel))
@@ -62,7 +61,7 @@ public:
         return false;
     }
 
-    KeyValueType lookup(KeyValueType key) const
+    ValueType lookup(KeyType key) const
     {
         size_t hash_value = hash(key);
         size_t slots_examined{};
@@ -72,24 +71,24 @@ public:
             auto entry_key = entry.key.load(std::memory_order_acquire);
             if (entry_key == NO_KEY)
             {
-                return NO_VALUE;
+                return no_value;
             }
             if (entry_key == key)
             {
                 auto entry_value = entry.value.load(std::memory_order_acquire);
                 // Is this needed to be thread safe?
-                return (entry_value != NO_VALUE) ? entry_value : NO_VALUE;
+                return (entry_value != no_value) ? entry_value : no_value;
             }
             ++slots_examined;
             hash_value = (hash_value + 1) % TableSize;
         }
-        return NO_VALUE;
+        return no_value;
     }
 
 private:
     std::vector<Entry> table;
 
-    static size_t hash(KeyValueType k)
+    static size_t hash(KeyType k)
     {
         return static_cast<size_t>(k) % TableSize;
     }
