@@ -24,7 +24,8 @@ TEST(TestLockFreeHashTable, InsertAndLookupSingleThread)
 }
 
 
-TEST(LockFreeHashTableTest, InsertSameKeyMultipleTimes) {
+TEST(LockFreeHashTableTest, InsertSameKeyMultipleTimes)
+{
     HashTable table;
 
     EXPECT_TRUE(table.insert(55, 1));
@@ -34,17 +35,20 @@ TEST(LockFreeHashTableTest, InsertSameKeyMultipleTimes) {
     EXPECT_EQ(table.lookup(55), 3); // Last inserted value should persist
 }
 
-TEST(LockFreeHashTableTest, FullTableThrowsException) {
+TEST(LockFreeHashTableTest, FullTableThrowsException)
+{
     HashTable table;
 
-    for (int i = 0; i < 1024; ++i) {
+    for (int i = 0; i < 1024; ++i)
+    {
         EXPECT_TRUE(table.insert(i, i * 10));
     }
 
     EXPECT_FALSE(table.insert(2048, 9999));
 }
 
-TEST(LockFreeHashTableTest, MultiThreadedInsertions) {
+TEST(LockFreeHashTableTest, MultiThreadedInsertions)
+{
     // repeat 1000 times
     for (int repeat = 0; repeat < 1000; ++repeat)
     {
@@ -53,9 +57,12 @@ TEST(LockFreeHashTableTest, MultiThreadedInsertions) {
         constexpr int inserts_per_thread = 64;
 
         std::vector<std::thread> threads;
-        for (int thread = 0; thread < num_threads; ++thread) {
-            threads.emplace_back([&table, thread]() {
-                for (int i = 0; i < inserts_per_thread; ++i) {
+        for (int thread = 0; thread < num_threads; ++thread)
+        {
+            threads.emplace_back([&table, thread]()
+            {
+                for (int i = 0; i < inserts_per_thread; ++i)
+                {
                     int key = thread * inserts_per_thread + i;
                     int value = key * 10;
                     table.insert(key, value);
@@ -63,13 +70,16 @@ TEST(LockFreeHashTableTest, MultiThreadedInsertions) {
             });
         }
 
-        for (auto& th : threads) {
+        for (auto& th : threads)
+        {
             th.join();
         }
 
         // Now verify all insertions
-        for (int thread = 0; thread < num_threads; ++thread) {
-            for (int i = 0; i < inserts_per_thread; ++i) {
+        for (int thread = 0; thread < num_threads; ++thread)
+        {
+            for (int i = 0; i < inserts_per_thread; ++i)
+            {
                 int key = thread * inserts_per_thread + i;
                 EXPECT_EQ(table.lookup(key), key * 10);
             }
