@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 find_package(GTest REQUIRED)
 find_package(benchmark REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
-
+include_directories(./../helpers/read_write_inputs.h)
 add_executable(main main.cpp)
 add_executable(benchmark benchmark.cpp)
 
