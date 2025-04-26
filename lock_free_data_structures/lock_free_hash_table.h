@@ -16,6 +16,8 @@
 template <typename KeyValueType, KeyValueType NO_KEY, KeyValueType NO_VALUE, size_t TableSize>
 class LockFreeHashTable {
   public:
+    static constexpr KeyValueType no_key = NO_KEY;
+    static constexpr KeyValueType no_value = NO_VALUE;
     struct Entry{
       std::atomic<KeyValueType> key;
       std::atomic<KeyValueType> value;
@@ -42,9 +44,30 @@ class LockFreeHashTable {
           entry.value.store(value, std::memory_order_release);
           return true;
       }
-
+      ++slots_examined;
+      hash = (hash + 1) % TableSize;
     }
     return false;
+  }
+
+  KeyValueType lookup(KeyValueType key) const {
+    size_t hash = hash(key);
+    size_t slots_examined{};
+    while(slots_examined < TableSize){
+      const auto & entry = table[hash];
+      auto entry_key = entry.key.load(std::memory_order_acquire);
+      if(entry_key == NO_KEY){
+          return NO_VALUE;
+      }
+      if(entry_key == key){
+        auto entry_value = entry.value.load(std::memory_order_acquire);
+        // Is this needed to be thread safe?
+        return (entry_value != NO_VALUE) ? entry_value : NO_VALUE;
+      }
+      ++slots_examined;
+      hash = (hash + 1) % TableSize;
+    }
+    return NO_VALUE;
   }
 
   private:
