@@ -11,7 +11,8 @@
 #include <cstdint>
 #include <vector>
 
-// The hash-table size is allocated once at compile time
+// The hash-table size is allocated once at compile time and it uses a simple modular hash.
+// This requires that the problem size (number of hash values) must be estimated before.
 template <typename KeyValueType, KeyValueType NO_KEY, KeyValueType NO_VALUE, size_t TableSize>
 class LockFreeHashTable {
   public:
@@ -26,8 +27,31 @@ class LockFreeHashTable {
     }
   }
 
+  bool insert(KeyValueType key, KeyValueType value) {
+    size_t hash = hash(key);
+    size_t slots_examined{};
+    while(slots_examined < TableSize){
+      auto & entry = table[hash];
+      KeyValueType expected = NO_KEY;
+      if(entry.key.load(std::memory_order_acquire) == NO_KEY){
+        if(entry.key.compare_exchange_strong(expected, key, std::memory_order_acq_rel)){
+            entry.value.store(value, std::memory_order_release);
+            return true;
+        }
+      } else if(entry.key.load(std::memory_order_acquire) == key){
+          entry.value.store(value, std::memory_order_release);
+          return true;
+      }
+
+    }
+    return false;
+  }
+
   private:
     std::vector<Entry> table;
+    static size_t hash(KeyValueType k) {
+      return static_cast<size_t>(k) % TableSize;
+    }
 };
 
 #endif //LOCK_FREE_HASH_TABLE_H
