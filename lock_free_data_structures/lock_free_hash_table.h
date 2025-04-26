@@ -88,9 +88,9 @@ public:
 private:
     std::vector<Entry> table;
 
-    static size_t hash(KeyType k)
+    static size_t hash(KeyType key)
     {
-        return static_cast<size_t>(k) % TableSize;
+        return size_t(std::hash<KeyType>{}(key)) % TableSize;
     }
 };
 
