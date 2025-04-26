@@ -132,3 +132,77 @@ TEST(LockFreeHashTableTest, ChaoticMultiThreadedInsertions) {
         }
     }
 }
+
+TEST(LockFreeHashTableTest, MultiThreadedLookups) {
+    HashTable table;
+    constexpr int N = 1000;
+    for (int i = 0; i < N; ++i) {
+        EXPECT_TRUE(table.insert(i, i*10));
+    }
+
+    // Launch threads that all do lookups
+    constexpr int num_threads = 8;
+    std::vector<std::thread> threads;
+    for (int thread = 0; thread < num_threads; ++thread) {
+        threads.emplace_back([&](){
+            for (int i = 0; i < N; ++i) {
+                EXPECT_EQ(table.lookup(i), i*10);
+            }
+        });
+    }
+    for (auto &therad: threads)
+        therad.join();
+}
+
+TEST(LockFreeHashTableTest, ConcurrentInsertsAndLookups) {
+    HashTable table;
+    constexpr int num_threads = 8;
+    constexpr int operations_per_thread = 128;
+
+    std::atomic<bool> ready_insert{false};
+    std::atomic<bool> ready_lookup{false};
+    std::vector<std::thread> threads;
+
+    for (int thread = 0; thread < num_threads/2; ++thread) {
+        threads.emplace_back([&,thread](){
+            // wait until
+            while(!ready_insert)
+                std::this_thread::yield();
+            for (int i = 0; i < operations_per_thread; ++i) {
+                table.insert(thread*operations_per_thread + i, (thread*operations_per_thread + i)*10);
+            }
+        });
+    }
+    ready_insert = true;
+
+    for (int thread = 0; thread < num_threads/2; ++thread) {
+        threads.emplace_back([&](){
+            while(!ready_lookup)
+                std::this_thread::yield();
+            // try lookups for the full key range repeatedly
+            for (int iter = 0; iter < 10; ++iter) {
+                for (int k = 0; k < (num_threads/2)*operations_per_thread; ++k) {
+                    // can be NO_VALUE if not yet inserted
+                    auto v = table.lookup(k);
+                    EXPECT_TRUE(v == HashTable::no_value || v == k*10);
+                }
+            }
+        });
+    }
+
+    // start them together
+    ready_insert = true;
+    // let insret threads run for a bit
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    ready_lookup = true;
+
+    for (auto &thread: threads)
+        thread.join();
+
+    // finally verify everything was inserted
+    for (int key = 0; key < (num_threads/2)*operations_per_thread; ++key) {
+        EXPECT_EQ(table.lookup(key), key*10);
+    }
+}
+
