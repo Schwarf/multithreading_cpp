@@ -20,3 +20,25 @@ TEST(TestLockFreeHashTable, InsertAndLookupSingleThread)
     EXPECT_TRUE(table.insert(42, 300));
     EXPECT_EQ(table.lookup(42), 300);
 }
+
+
+TEST(LockFreeHashTableTest, InsertSameKeyMultipleTimes) {
+    HashTable table;
+
+    EXPECT_TRUE(table.insert(55, 1));
+    EXPECT_TRUE(table.insert(55, 2));
+    EXPECT_TRUE(table.insert(55, 3));
+
+    EXPECT_EQ(table.lookup(55), 3); // Last inserted value should persist
+}
+
+TEST(LockFreeHashTableTest, FullTableThrowsException) {
+    HashTable table;
+
+    for (int i = 0; i < 1024; ++i) {
+        EXPECT_TRUE(table.insert(i, i * 10));
+    }
+
+    EXPECT_FALSE(table.insert(2048, 9999));
+}
+
