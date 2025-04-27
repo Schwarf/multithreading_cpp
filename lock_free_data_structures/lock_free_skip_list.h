@@ -41,6 +41,15 @@ private:
     size_t node_count{};
     std::mt19937 generator;
     std::bernoulli_distribution distribution;
+public:
+    LockFreeSkipList(float probability = 0.5f)
+    : probability(probability), generator(std::random_device{}()), distribution(p) {
+        head = new Node(std::numeric_limits<KeyType>::lowest(), ValueType{}, MaxLevel);
+        tail = new Node(std::numeric_limits<KeyType>::max(), ValueType{}, MaxLevel);
+        for (int i = 0; i <= MaxLevel; ++i) {
+            head->forward[i].store(tail, std::memory_order_relaxed);
+        }
+    }
 
 };
 
