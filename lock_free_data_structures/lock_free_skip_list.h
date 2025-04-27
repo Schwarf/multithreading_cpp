@@ -51,6 +51,18 @@ public:
         }
     }
 
+    ~LockFreeSkipList() {
+        // TODO: This is most likely wrong ... probably needs hazard pointers or something else ...
+        Node* node = head;
+        while (node) {
+            Node* next = node->forward[0].load();
+            delete node;
+            node = next;
+        }
+    }
+
+
+
 };
 
 #endif //LOCK_FREE_SKIP_LIST_H
