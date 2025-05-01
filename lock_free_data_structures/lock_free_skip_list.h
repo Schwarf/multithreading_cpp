@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <random>
+#include <array>
 #include <thread>
 #include <concepts>
 
@@ -22,7 +23,7 @@ private:
         int top_level;
         std::atomic<bool> marked;
         std::atomic<bool> fully_linked;
-        std::atomic<Node*> forward[MaxLevel + 1];
+        std::array<std::atomic<Node*>, MaxLevel+1> forward;
 
         Node(const KeyType& k, const ValueType& v, int level)
             : key(k), value(v), top_level(level), marked(false), fully_linked(false)
@@ -60,6 +61,13 @@ public:
             node = next;
         }
     }
+
+    bool find_node(const KeyType& key, std::array<Node*, MaxLevel+1>&  predecessors, std::array<Node*, MaxLevel+1>&  successors)
+    {
+        bool found = false;
+
+    }
+
 
 
 
