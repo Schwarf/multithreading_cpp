@@ -38,7 +38,6 @@ private:
     Node *head;
     Node *tail;
     float probability{};
-    int top_level{};
     size_t node_count{};
     std::mt19937 generator;
     std::bernoulli_distribution distribution;
@@ -65,7 +64,37 @@ public:
     bool find_node(const KeyType& key, std::array<Node*, MaxLevel+1>&  predecessors, std::array<Node*, MaxLevel+1>&  successors)
     {
         bool found = false;
-
+        Node * previous = head;
+        for (int level = MaxLevel - 1; level > -1; --level)
+        {
+            auto current = previous->forward[level].load(std::memory_order_acquire);
+            while (true)
+            {
+                auto next = current->forward[level].load(std::memory_order_acquire);
+                if (current->marked.load(std::memory_order_relaxed))
+                {
+                    if(!previous->forward[level].compare_exchange_strong(current, next))
+                        return find_node(key, predecessors, successors);
+                    current = next;
+                }
+                else
+                {
+                    if (current->key < key)
+                    {
+                        previous = current;
+                        current = next;
+                    }
+                    else
+                        break;
+                }
+            }
+            predecessors[level] = previous;
+            successors[level] = current;
+        }
+        auto candidate = successors[0];
+        if (candidate->key == key && candidate->fully_linked.load(std::memory_order_acquire) && !candidate->marked.load(std::memory_order_acquire))
+            found = true;
+        return found;
     }
 
 
