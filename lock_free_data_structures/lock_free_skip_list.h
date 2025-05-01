@@ -152,6 +152,41 @@ public:
             return true;
         }
     }
+
+    bool remove(const KeyType& key)
+    {
+        std::array<Node*, MaxLevel + 1> predecessors;
+        std::array<Node*, MaxLevel + 1> successors;
+        Node * node_to_remove = nullptr;
+        bool is_marked = false;
+        int top_level{-1};
+        while (true)
+        {
+            if (find_node(key, predecessors, successors))
+                return false;
+            node_to_remove = successors[0];
+            if (!is_marked)
+            {
+                top_level = node_to_remove->top_level;
+                bool expected = false;
+                if (!node_to_remove->marked.compare_exchange_strong(expected, true))
+                    return false;
+                is_marked = true;
+            }
+            // unlink
+            for (int level = top_level; level >= 0; --level)
+            {
+                Node * next{};
+                do
+                {
+                    next = node_to_remove->forward[level].load(std::memory_order_acquire);
+                }while (!node_to_remove->forward[level].compare_exchange_strong(next, next));
+                predecessors[level] = next->forward[level].compare_exchange_strong(node_to_remove, next);
+            }
+            delete node_to_remove;
+            return true;
+        }
+    }
 };
 
 #endif //LOCK_FREE_SKIP_LIST_H
