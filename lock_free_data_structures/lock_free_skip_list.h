@@ -187,6 +187,27 @@ public:
             return true;
         }
     }
+
+    bool search(const KeyType& key, const ValueType& value)
+    {
+        auto previous = head;
+        for (int level = MaxLevel ; level > -1; --level)
+        {
+            auto current = previous->forward[level].load(std::memory_order_acquire);
+            while (current && current->key < key)
+            {
+                previous = current;
+                current = current->forward[level].load(std::memory_order_acquire);
+            }
+        }
+        auto current = previous->forward[0].load(std::memory_order_acquire);
+        if(current && current->key == key && current->fully_linked.load(std::memory_order_acquire) && !current->marked.load(std::memory_order_acquire))
+        {
+            value = current->value;
+            return true;
+        }
+        return false;
+    }
 };
 
 #endif //LOCK_FREE_SKIP_LIST_H
