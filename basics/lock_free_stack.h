@@ -7,72 +7,8 @@
 #include <atomic>
 #include <memory>
 #include <thread>
+#include "hazard_pointer.h"
 
-unsigned int constexpr max_hazard_pointers = 100;
-
-struct HazardPointer
-{
-    std::atomic<std::thread::id> id;
-    std::atomic<void*> pointer;
-};
-
-inline HazardPointer hazard_pointers[max_hazard_pointers];
-
-class HazardPointerOwner
-{
-    HazardPointer* hazard_pointer;
-
-public:
-    HazardPointerOwner(HazardPointerOwner const&) = delete;
-    HazardPointerOwner operator=(HazardPointerOwner const&) = delete;
-
-    HazardPointerOwner():
-        hazard_pointer(nullptr)
-    {
-        for (auto& hp : hazard_pointers)
-        {
-            std::thread::id old_id;
-            if (hp.id.compare_exchange_strong(old_id, std::this_thread::get_id()))
-            {
-                hazard_pointer = &hp;
-                break;
-            }
-        }
-        if (!hazard_pointer)
-        {
-            throw std::runtime_error("No hazard pointers available");
-        }
-    }
-
-    std::atomic<void*>& get_pointer()
-    {
-        return hazard_pointer->pointer;
-    }
-
-    ~HazardPointerOwner()
-    {
-        hazard_pointer->pointer.store(nullptr);
-        hazard_pointer->id.store(std::thread::id());
-    }
-};
-
-inline std::atomic<void*>& get_hazard_pointer_for_current_thread()
-{
-    thread_local static HazardPointerOwner hazard;
-    return hazard.get_pointer();
-}
-
-inline bool outstanding_hazard_pointers_for(void* pointer)
-{
-    for (auto& hazard_pointer : hazard_pointers)
-    {
-        if (hazard_pointer.pointer.load() == pointer)
-        {
-            return true;
-        }
-    }
-    return false;
-}
 
 template <typename T>
 void do_delete(void* pointer)
@@ -115,7 +51,7 @@ void reclaim_later(T* data)
     add_to_reclaim_list(new data_to_reclaim(data));
 }
 
-inline void delete_nodes_with_no_hazards()
+inline void delete_nodes_reclaim_laterwith_no_hazards()
 {
     data_to_reclaim* current = nodes_to_reclaim.exchange(nullptr);
     while (current)

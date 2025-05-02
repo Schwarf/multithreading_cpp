@@ -5,96 +5,71 @@
 #ifndef HAZARD_POINTER_H
 #define HAZARD_POINTER_H
 #include <atomic>
-#include <vector>
 #include <thread>
+#include <stdexcept>
 
-template<typename T>
-class HazardPointer {
-public:
-	HazardPointer() : hazard_{nullptr} {}
+unsigned int constexpr max_hazard_pointers = 100;
 
-	std::atomic<T*>& Get() {
-		return hazard_;
-	}
-
-private:
-	std::atomic<T*> hazard_;
+struct HazardPointer
+{
+    std::atomic<std::thread::id> id;
+    std::atomic<void*> pointer;
 };
 
-template<typename T>
-class HazardPointerManager {
+inline HazardPointer hazard_pointers[max_hazard_pointers];
+
+class HazardPointerOwner
+{
+    HazardPointer* hazard_pointer;
+
 public:
-	HazardPointerManager() : max_hp_{std::thread::hardware_concurrency()}, hp_{max_hp_}, retired_{nullptr} {}
+    HazardPointerOwner(HazardPointerOwner const&) = delete;
+    HazardPointerOwner operator=(HazardPointerOwner const&) = delete;
 
-	~HazardPointerManager() {
-		for (int i = 0; i < max_hp_; ++i) {
-			delete hp_[i];
-		}
+    HazardPointerOwner(): hazard_pointer(nullptr)
+    {
+        for (auto& hp : hazard_pointers)
+        {
+            std::thread::id old_id;
+            if (hp.id.compare_exchange_strong(old_id, std::this_thread::get_id()))
+            {
+                hazard_pointer = &hp;
+                break;
+            }
+        }
+        if (!hazard_pointer)
+        {
+            throw std::runtime_error("No hazard pointers available");
+        }
+    }
 
-		auto current = retired_.load();
-		while (current) {
-			auto next = current->next;
-			delete current;
-			current = next;
-		}
-	}
+    std::atomic<void*>& get_pointer()
+    {
+        return hazard_pointer->pointer;
+    }
 
-	std::atomic<bool>& GetActive() {
-		return active_;
-	}
-
-	void Retire(T* ptr) {
-		retired_list_node* node = new retired_list_node{ptr, nullptr};
-
-		retired_list_node* old_head = retired_.load();
-		do {
-			node->next = old_head;
-		} while (!retired_.compare_exchange_weak(old_head, node));
-	}
-
-	void Scan() {
-		active_ = true;
-
-		std::vector<T*> hazards;
-		for (int i = 0; i < max_hp_; ++i) {
-			auto ptr = hp_[i]->Get().load();
-			if (ptr) {
-				hazards.push_back(ptr);
-			}
-		}
-
-		auto current = retired_.load();
-		while (current) {
-			bool in_use = false;
-			for (auto it = hazards.begin(); !in_use && it != hazards.end(); ++it) {
-				in_use = (*it == current->ptr);
-			}
-
-			if (!in_use) {
-				retired_list_node* temp = current;
-				current = current->next;
-				retired_.compare_exchange_strong(temp, current);
-				delete temp;
-			}
-			else {
-				current = current->next;
-			}
-		}
-
-		active_ = false;
-	}
-
-private:
-	struct retired_list_node {
-		T* ptr;
-		retired_list_node* next;
-	};
-
-	unsigned int max_hp_;
-	std::vector<HazardPointer<T>*> hp_;
-	std::atomic<retired_list_node*> retired_;
-	std::atomic<bool> active_;
+    ~HazardPointerOwner()
+    {
+        hazard_pointer->pointer.store(nullptr);
+        hazard_pointer->id.store(std::thread::id());
+    }
 };
 
+inline std::atomic<void*>& get_hazard_pointer_for_current_thread()
+{
+    thread_local static HazardPointerOwner hazard;
+    return hazard.get_pointer();
+}
 
+inline bool outstanding_hazard_pointers_for(void* pointer)
+{
+    for (auto& hazard_pointer : hazard_pointers)
+    {
+        if (hazard_pointer.pointer.load() == pointer)
+        {
+            return true;
+        }
+    }
+    return false;
+}
 #endif //HAZARD_POINTER_H
