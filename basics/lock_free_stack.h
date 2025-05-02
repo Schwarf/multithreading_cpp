@@ -17,7 +17,7 @@ struct HazardPointer
 	std::atomic<void*> pointer;
 };
 
-HazardPointer hazard_pointers[maximum_number_of_threads];
+inline HazardPointer hazard_pointers[maximum_number_of_threads];
 
 class HazardPointerOwner
 {

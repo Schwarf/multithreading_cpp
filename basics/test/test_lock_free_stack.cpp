@@ -41,9 +41,9 @@ TEST(LockFreeStackTest, test_push_and_pop_check_values)
 
 		// Check that all result_values were pushed and popped
 
-		ASSERT_NE(result_values, expected_values);
+		EXPECT_NE(result_values, expected_values);
 		std::sort(result_values.begin(), result_values.end());
 		std::sort(expected_values.begin(), expected_values.end());
-		ASSERT_EQ(result_values, expected_values);
+		EXPECT_EQ(result_values, expected_values);
 	}
 }
