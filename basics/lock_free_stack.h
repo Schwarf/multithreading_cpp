@@ -30,59 +30,6 @@ private:
     std::atomic<unsigned int> number_of_threads_in_pop{};
     std::atomic<Node*> to_be_deleted;
 
-    static void delete_nodes(Node* node)
-    {
-        while (node)
-        {
-            Node* next = node->next;
-            delete node;
-            node = next;
-        }
-    }
-
-    void chain_nodes_for_deletion(Node* node)
-    {
-        Node* last = node;
-        while (Node* const next = last->next)
-        {
-            last = next;
-        }
-        chain_nodes_for_deletion(node, last);
-    }
-
-    void chain_nodes_for_deletion(Node* first, Node* last)
-    {
-        last->next = to_be_deleted;
-        while (!to_be_deleted.compare_exchange_weak(last->next, first));
-    }
-
-    void chain_single_node_for_deletion(Node* node)
-    {
-        chain_nodes_for_deletion(node, node);
-    }
-
-    void try_reclaim_memory(Node* old_head)
-    {
-        if (number_of_threads_in_pop == 1)
-        {
-            Node* nodes_to_be_deleted = to_be_deleted.exchange(nullptr);
-            if (number_of_threads_in_pop == 1)
-            {
-                delete_nodes(nodes_to_be_deleted);
-            }
-            else if (nodes_to_be_deleted)
-            {
-                chain_nodes_for_deletion(nodes_to_be_deleted);
-            }
-            delete old_head;
-        }
-        else
-        {
-            chain_single_node_for_deletion(old_head);
-            --number_of_threads_in_pop;
-        }
-    }
-
 public:
     void push(const T& new_value)
     {
