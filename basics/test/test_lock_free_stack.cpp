@@ -2,48 +2,86 @@
 // Created by andreas on 23.04.23.
 //
 
+
+#include <gtest/gtest.h>
+#include <algorithm>
+#include <atomic>
+#include <mutex>
 #include <thread>
-#include <numeric>
-#include "gtest/gtest.h"
+#include <vector>
 #include "lock_free_stack.h"
 
-
-TEST(LockFreeStackTest, test_push_and_pop_check_values)
+TEST(LockFreeStackTest, MultiProducerMultiConsumer)
 {
-	int run_test{1000};
-	constexpr int number_of_threads{10};
-	constexpr int number_of_operations{100};
-	for (int run{}; run < run_test; run++) {
+    LockFreeStack<int> stack;
+    constexpr int producer_count = 4;
+    constexpr int consumer_count = 4;
+    constexpr int operations = 1000;
+    constexpr int item_count = producer_count * operations;
 
-		LockFreeStack<int> stack;
-		std::vector<int> input(number_of_operations);
-		std::iota(input.begin(), input.end(), 0);
-		std::vector<int> result_values;
-		std::vector<int> expected_values;
-		std::vector<std::thread> threads;
-		auto fill_stack_per_thread =
-			[&stack, &result_values,  number_of_operations]()
-			{
-				for (int i{}; i < number_of_operations; ++i) {
-					stack.push(i);
-					result_values.push_back(*stack.pop());
-				}
-			};
-		for (int i = 0; i < number_of_threads; ++i) {
-			threads.emplace_back(fill_stack_per_thread);
-			expected_values.insert(expected_values.end(), input.begin(), input.end());
-		}
+    // 1) Launch producers
+    std::vector<std::thread> producers;
+    for (int thread_count = 0; thread_count < producer_count; ++thread_count)
+    {
+        producers.emplace_back([&, thread_count]
+        {
+            int base = thread_count * operations;
+            for (int i = 0; i < operations; ++i)
+            {
+                stack.push(base + i);
+            }
+        });
+    }
 
-		// Wait for all threads to finish
-		for (auto &thread: threads) {
-			thread.join();
-		}
+    // 2) Consumers collect results under a mutex
+    std::vector<int> results;
+    results.reserve(item_count);
+    std::mutex results_mutex;
+    std::atomic<int> consumed_count{0};
 
-		// Check that all result_values were pushed and popped
+    std::vector<std::thread> consumers;
+    for (int c = 0; c < consumer_count; ++c)
+    {
+        consumers.emplace_back([&]
+        {
+            while (true)
+            {
+                auto shared_ptr = stack.pop();
+                if (!shared_ptr)
+                {
+                    // stack is empty *right now*; check if we're done
+                    if (consumed_count.load() >= item_count)
+                        break;
+                    // otherwise spin/wait a bit
+                    std::this_thread::yield();
+                    continue;
+                }
+                int value = *shared_ptr;
+                {
+                    std::lock_guard<std::mutex> lg(results_mutex);
+                    results.push_back(value);
+                }
+                ++consumed_count;
+            }
+        });
+    }
 
-		EXPECT_NE(result_values, expected_values);
-		std::sort(result_values.begin(), result_values.end());
-		std::sort(expected_values.begin(), expected_values.end());
-		EXPECT_EQ(result_values, expected_values);
-	}
+    // 3) Wait for everyone
+    for (auto& thread : producers)
+        thread.join();
+    for (auto& thread : consumers)
+        thread.join();
+
+    // 4) Validate
+    EXPECT_EQ(results.size(), item_count);
+
+    std::vector<int> expected;
+    expected.reserve(item_count);
+    for (int p = 0; p < producer_count; ++p)
+        for (int i = 0; i < operations; ++i)
+            expected.push_back(p * operations + i);
+
+    std::sort(results.begin(), results.end());
+    std::sort(expected.begin(), expected.end());
+    EXPECT_EQ(results, expected);
 }
