@@ -6,60 +6,73 @@
 #define LOCK_FREE_STACK_H
 #include <atomic>
 #include <memory>
-#include <stack>
 #include <thread>
 
-unsigned const max_hazard_pointers=100;
-struct hazard_pointer
+unsigned int constexpr max_hazard_pointers = 100;
+
+struct HazardPointer
 {
     std::atomic<std::thread::id> id;
     std::atomic<void*> pointer;
 };
 
-hazard_pointer hazard_pointers[max_hazard_pointers];
+inline HazardPointer hazard_pointers[max_hazard_pointers];
 
-class hp_owner
+class HazardPointerOwner
 {
-    hazard_pointer* hp;
+    HazardPointer* hazard_pointer;
+
 public:
-    hp_owner(hp_owner const&)=delete;
-    hp_owner operator=(hp_owner const&)=delete;
-    hp_owner():
-    hp(nullptr)
+    HazardPointerOwner(HazardPointerOwner const&) = delete;
+    HazardPointerOwner operator=(HazardPointerOwner const&) = delete;
+
+    HazardPointerOwner():
+        hazard_pointer(nullptr)
     {
-        for(unsigned i=0;i<max_hazard_pointers;++i)
+        for (auto& hp : hazard_pointers)
         {
             std::thread::id old_id;
-            if(hazard_pointers[i].id.compare_exchange_strong(
-            old_id,std::this_thread::get_id()))
+            if (hp.id.compare_exchange_strong(old_id, std::this_thread::get_id()))
             {
-                hp=&hazard_pointers[i];
+                hazard_pointer = &hp;
                 break;
             }
         }
-        if(!hp)
+        if (!hazard_pointer)
         {
             throw std::runtime_error("No hazard pointers available");
         }
     }
+
     std::atomic<void*>& get_pointer()
     {
-        return hp->pointer;
+        return hazard_pointer->pointer;
     }
-    ~hp_owner()
+
+    ~HazardPointerOwner()
     {
-        hp->pointer.store(nullptr);
-        hp->id.store(std::thread::id());
+        hazard_pointer->pointer.store(nullptr);
+        hazard_pointer->id.store(std::thread::id());
     }
 };
 
-std::atomic<void*>& get_hazard_pointer_for_current_thread()
+inline std::atomic<void*>& get_hazard_pointer_for_current_thread()
 {
-    thread_local static hp_owner hazard;
+    thread_local static HazardPointerOwner hazard;
     return hazard.get_pointer();
 }
 
-
+inline bool outstanding_hazard_pointers_for(void* pointer)
+{
+    for (auto & hazard_pointer : hazard_pointers)
+    {
+        if (hazard_pointer.pointer.load() == pointer)
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
 template <typename T>
 class LockFreeStack
