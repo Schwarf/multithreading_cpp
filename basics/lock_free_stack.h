@@ -15,20 +15,17 @@ class LockFreeStack
 private:
     struct Node
     {
-        std::shared_ptr<T> value_;
+        std::shared_ptr<T> data;
         Node* next;
 
         explicit Node(T const& value)
-        // We allocate the data on the heap in the Node
-            : value_(std::make_shared<T>(value)),
+            : data(std::make_shared<T>(value)),
               next(nullptr)
         {
         }
     };
 
     std::atomic<Node*> head;
-    std::atomic<unsigned int> number_of_threads_in_pop{};
-    std::atomic<Node*> to_be_deleted;
 
 public:
     void push(const T& new_value)
@@ -73,19 +70,5 @@ public:
         }
         return result;
     }
-
-    // std::shared_ptr<T> pop()
-    // {
-    // 	++number_of_threads_in_pop;
-    // 	Node* old_head = head.load();
-    // 	while(old_head &&  !head.compare_exchange_weak(old_head, old_head->next));
-    // 	std::shared_ptr<T> result;
-    // 	if(old_head)
-    // 	{
-    // 		result.swap(old_head->value_);
-    // 	}
-    // 	try_reclaim_memory(old_head);
-    // 	return result;
-    // }
 };
 #endif //LOCK_FREE_STACK_H
