@@ -54,7 +54,7 @@ private:
 
 public:
     LockFreeSkipList(float probability = 0.5f)
-        : probability(probability), generator(std::random_device{}()), distribution(p)
+        : probability(probability), generator(std::random_device{}()), distribution(probability)
     {
         head = new Node(std::numeric_limits<KeyType>::lowest(), ValueType{}, MaxLevel);
         tail = new Node(std::numeric_limits<KeyType>::max(), ValueType{}, MaxLevel);
@@ -162,7 +162,7 @@ public:
         int top_level{-1};
         while (true)
         {
-            if (find_node(key, predecessors, successors))
+            if (!find_node(key, predecessors, successors))
                 return false;
             node_to_remove = successors[0];
             if (!is_marked)
@@ -181,14 +181,14 @@ public:
                 {
                     next = node_to_remove->forward[level].load(std::memory_order_acquire);
                 }while (!node_to_remove->forward[level].compare_exchange_strong(next, next));
-                predecessors[level] = next->forward[level].compare_exchange_strong(node_to_remove, next);
+                predecessors[level]->forward[level].compare_exchange_strong(node_to_remove, next);
             }
             delete node_to_remove;
             return true;
         }
     }
 
-    bool search(const KeyType& key, const ValueType& value)
+    bool search(const KeyType& key, ValueType& value)
     {
         auto previous = head;
         for (int level = MaxLevel ; level > -1; --level)
