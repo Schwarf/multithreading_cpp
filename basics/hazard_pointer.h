@@ -12,11 +12,11 @@ unsigned int constexpr max_hazard_pointers = 100;
 
 struct HazardPointer
 {
-    std::atomic<std::thread::id> id;
-    std::atomic<void*> pointer;
+    std::atomic<std::thread::id> id{std::thread::id()};
+    std::atomic<void*> pointer{nullptr};
 };
 
-inline HazardPointer hazard_pointers[max_hazard_pointers];
+inline HazardPointer hazard_pointers[max_hazard_pointers] = {};
 
 class HazardPointerOwner
 {

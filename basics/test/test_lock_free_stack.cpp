@@ -174,3 +174,47 @@ TEST(LockFreeStackTest, MultiProducerPopAndTop) {
         EXPECT_EQ(results[i], i);
     }
 }
+//
+// TEST(LockFreeStackTest, MixedPushPopTopStress) {
+//     LockFreeStack<int> stack;
+//     auto threads_n = std::max(2u, 10u);
+//
+//     std::atomic<int> pushes{0}, pops{0}, tops{0};
+//     auto stop_time = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+//
+//     std::vector<std::thread> threads;
+//     threads.reserve(threads_n);
+//
+//     for (unsigned i = 0; i < threads_n; ++i) {
+//         threads.emplace_back([&, stop_time, i] {
+//             std::mt19937_64 rng(i);
+//             while (std::chrono::steady_clock::now() < stop_time) {
+//                 switch (rng() % 3) {
+//                   case 0:
+//                       stack.push(int(rng()));
+//                       ++pushes;
+//                       break;
+//                     case 1:
+//                         if (stack.pop()) ++pops;
+//                         break;
+//                       default:
+//                           if (stack.top()) ++tops;
+//                           break;
+//                       }
+//                       if ((rng() & 0xF) == 0)
+//                           std::this_thread::yield();
+//                   }
+//               });
+//     }
+//
+//     for (auto& t : threads) t.join();
+//
+//     EXPECT_LE(pops.load(), pushes.load());
+//
+//     int remaining = 0;
+//     while (stack.pop()) ++remaining;
+//     EXPECT_EQ(pushes.load(), pops.load() + remaining);
+//
+//     // It's vanishingly unlikely to be zero, but if you really need to guarantee:
+//     EXPECT_GT(tops.load(), 0);
+// }
