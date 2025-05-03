@@ -22,7 +22,7 @@ struct data_to_reclaim
     explicit data_to_reclaim(T* pointer):
         data(pointer),
         deleter(&do_delete<T>),
-        next(0)
+        next(nullptr)
     {
     }
 
@@ -32,7 +32,7 @@ struct data_to_reclaim
     }
 };
 
-std::atomic<data_to_reclaim*> nodes_to_reclaim;
+inline std::atomic<data_to_reclaim*> nodes_to_reclaim;
 
 
 inline void add_to_reclaim_list(data_to_reclaim* node)
