@@ -15,7 +15,12 @@ class LockFreeStack
 private:
     struct Node
     {
+        // We use a shared pointer instead of T the payload of type T lives in its own control block
+        // separated from the Node
+        // When pop-ing we just grab a copy and then retire the node. T element remains alive even if Node is deleted
+        // immediately
         std::shared_ptr<T> data;
+        // Need a simple pointer here for atomics.
         Node* next;
 
         explicit Node(T const& value)
@@ -24,7 +29,9 @@ private:
         {
         }
     };
-
+    // Multiple threads will concurrently try to insert at (or remove from) the front of the list.
+    // We need an atomic compare-and-swap on head so that two pushes or pops can race but only one “wins” at a time,
+    // without ever taking a lock.
     std::atomic<Node*> head;
 
 public:
@@ -32,7 +39,8 @@ public:
     {
         auto const new_node = new Node(new_value);
         new_node->next = head.load();
-        // Typically use 'compare_exchange_weak' in a loop because in can fail spuriously
+        // Typically use 'compare_exchange_weak' in a loop because it can fail spuriously
+        // But better performance than compare_exchange_strong
         while (!head.compare_exchange_weak(new_node->next, new_node));
     }
 
