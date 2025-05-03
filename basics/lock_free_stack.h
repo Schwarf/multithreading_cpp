@@ -36,6 +36,23 @@ public:
         while (!head.compare_exchange_weak(new_node->next, new_node));
     }
 
+    std::unique_ptr<T> top() {
+        auto& hp = get_hazard_pointer_for_current_thread();
+        Node* p = nullptr;
+        do {
+            p = head.load(std::memory_order_acquire);
+            hp.store(p);
+        } while (p && head.load(std::memory_order_acquire) != p);
+
+        std::unique_ptr<T> result;
+        if (p) {
+            // clone the payload
+            result = std::make_unique<T>(*p->data);
+        }
+        hp.store(nullptr);
+        return result;  // nullptr if stack was empty
+    }
+
     std::shared_ptr<T> pop()
     {
         std::atomic<void*>& hp = get_hazard_pointer_for_current_thread();
