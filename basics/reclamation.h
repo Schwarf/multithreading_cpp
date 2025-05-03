@@ -4,7 +4,6 @@
 
 #ifndef RECLAMATION_H
 #define RECLAMATION_H
-#include <thread>
 #include "hazard_pointer.h"
 
 template <typename T>
