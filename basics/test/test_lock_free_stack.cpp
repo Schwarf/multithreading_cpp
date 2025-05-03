@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+#include <random>
 #include <thread>
 #include <vector>
 #include "lock_free_stack.h"
@@ -84,4 +85,44 @@ TEST(LockFreeStackTest, MultiProducerMultiConsumer)
     std::sort(results.begin(), results.end());
     std::sort(expected.begin(), expected.end());
     EXPECT_EQ(results, expected);
+}
+
+//–– Single‐threaded correctness of push / top / pop ––
+TEST(SharedPtrStackTest, SingleThreadTopPop) {
+    LockFreeStack<int> stack;
+    // empty → top() == nullptr
+    EXPECT_EQ(stack.top(), nullptr);
+
+    // push 1,2 and observe LIFO via top()/pop()
+    stack.push(1);
+    {
+        auto top_ptr = stack.top();
+        EXPECT_NE(top_ptr, nullptr);
+        EXPECT_EQ(*top_ptr, 1);
+    }
+
+    stack.push(2);
+    {
+        auto top_ptr = stack.top();
+        EXPECT_NE(top_ptr, nullptr);
+        EXPECT_EQ(*top_ptr, 2);
+    }
+
+    auto pop_ptr = stack.pop();
+    EXPECT_NE(pop_ptr, nullptr);
+    EXPECT_EQ(*pop_ptr, 2);
+
+    {
+        auto top_ptr = stack.top();
+        EXPECT_NE(top_ptr, nullptr);
+        EXPECT_EQ(*top_ptr, 1);
+    }
+
+    pop_ptr = stack.pop();
+    EXPECT_NE(pop_ptr, nullptr);
+    EXPECT_EQ(*pop_ptr, 1);
+
+    // now empty again
+    EXPECT_EQ(stack.top(), nullptr);
+    EXPECT_EQ(stack.pop(), nullptr);
 }
