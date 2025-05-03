@@ -26,10 +26,10 @@ TEST(LockFreeStackTest, MultiProducerMultiConsumer)
     {
         producers.emplace_back([&, thread_count]
         {
-            int base = thread_count * operations;
+            const int base_value = thread_count * operations;
             for (int i = 0; i < operations; ++i)
             {
-                stack.push(base + i);
+                stack.push(base_value + i);
             }
         });
     }
@@ -82,13 +82,13 @@ TEST(LockFreeStackTest, MultiProducerMultiConsumer)
         for (int i = 0; i < operations; ++i)
             expected.push_back(p * operations + i);
 
-    std::sort(results.begin(), results.end());
-    std::sort(expected.begin(), expected.end());
+    std::ranges::sort(results);
+    std::ranges::sort(expected);
     EXPECT_EQ(results, expected);
 }
 
 //–– Single‐threaded correctness of push / top / pop ––
-TEST(SharedPtrStackTest, SingleThreadTopPop) {
+TEST(LockFreeStackTest, SingleThreadTopPop) {
     LockFreeStack<int> stack;
     // empty → top() == nullptr
     EXPECT_EQ(stack.top(), nullptr);
@@ -125,4 +125,52 @@ TEST(SharedPtrStackTest, SingleThreadTopPop) {
     // now empty again
     EXPECT_EQ(stack.top(), nullptr);
     EXPECT_EQ(stack.pop(), nullptr);
+}
+
+
+//–– Multiple producers -> single‐threaded pop + top check ––
+TEST(LockFreeStackTest, MultiProducerPopAndTop) {
+    LockFreeStack<int> stack;
+    constexpr int producer_count = 4;
+    constexpr int operations = 1000;
+    constexpr int total_items = producer_count * operations;
+
+    // launch concurrent producers
+    std::vector<std::thread> threads;
+    for (int thread = 0; thread < producer_count; ++thread) {
+        threads.emplace_back([&, thread] {
+            const int base_value = thread * operations;
+            for (int i = 0; i < operations; ++i) {
+                stack.push(base_value + i);
+            }
+        });
+    }
+    for (auto &thread : threads) thread.join();
+
+    // after all pushes, top() should be non‐null and within [0, TOTAL)
+    {
+        auto top_ptr = stack.top();
+        EXPECT_NE(top_ptr, nullptr);
+        EXPECT_GE(*top_ptr, 0);
+        EXPECT_LT(*top_ptr, total_items);
+    }
+
+    // now pop everything in a single thread
+    std::vector<int> results;
+    results.reserve(total_items);
+    for (int i = 0; i < total_items; ++i) {
+        auto pop_ptr = stack.pop();
+        EXPECT_NE(pop_ptr, nullptr);
+        results.push_back(*pop_ptr);
+    }
+
+    // stack must now be empty
+    EXPECT_EQ(stack.top(), nullptr);
+    EXPECT_EQ(stack.pop(), nullptr);
+
+    // verify we got exactly the multiset {0,1,...,TOTAL-1}
+    std::ranges::sort(results);
+    for (int i = 0; i < total_items; ++i) {
+        EXPECT_EQ(results[i], i);
+    }
 }
