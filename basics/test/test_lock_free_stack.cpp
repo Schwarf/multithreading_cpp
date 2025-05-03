@@ -188,6 +188,66 @@ TEST(LockFreeStackTest, PushTopStress) {
     // Since top() never removed items, the total number popped must equal pushes
     EXPECT_EQ(remaining, total_pushes.load());
 }
+
+TEST(LockFreeStackTest, PopTopStress) {
+    LockFreeStack<int> stack;
+    const unsigned N = std::thread::hardware_concurrency() ?
+                       std::thread::hardware_concurrency()-10 : 4u;
+
+    // 1) Single‐threaded push
+    constexpr int item_count = 100000;
+    for (int i = 0; i < item_count; ++i) {
+        stack.push(i);
+    }
+
+    // 2) Now N threads concurrently pop or top
+
+    std::atomic<int> total_pops{0}, total_tops{0};
+    std::vector<std::thread> threads;
+    threads.reserve(N);
+
+    for (unsigned int thread = 0; thread < N; ++thread) {
+        threads.emplace_back([&, thread]{
+            std::mt19937_64 rng(thread);
+            while (true) {
+                int popped_so_far = total_pops.load(std::memory_order_relaxed);
+                if (popped_so_far >= item_count)
+                    break;
+
+                if ((rng() & 1) == 0) {
+                    // try to pop
+                    if (stack.pop()) {
+                        ++total_pops;
+                    }
+                } else {
+                    // peek at top
+                    if (stack.top()) {
+                        ++total_tops;
+                    }
+                }
+
+                // occasional back-off
+                if ((rng() & 0xF) == 0) {
+                    std::this_thread::yield();
+                }
+            }
+        });
+    }
+
+    for (auto &thread : threads) thread.join();
+
+    // 3) Validate
+    // We must have popped exactly all pushed items:
+    EXPECT_EQ(total_pops.load(), item_count);
+
+    // And since we did tops under contention, we should have seen some:
+    EXPECT_GT(total_tops.load(), 0);
+
+    // Finally, stack must now be empty:
+    EXPECT_EQ(stack.pop(), nullptr);
+}
+
+
 //–– Single‐threaded correctness of push / top / pop ––
 TEST(LockFreeStackTest, SingleThreadTopPop) {
     LockFreeStack<int> stack;
