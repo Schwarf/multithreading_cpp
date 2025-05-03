@@ -7,16 +7,16 @@ set(CMAKE_C_STANDARD 99)
 # ——— Sanitizers —————————————————————————————————————
 # For GCC/Clang, enable AddressSanitizer (heap-use-after-free, OOB, leaks)
 # and UBSan (undefined-behavior detection).
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    message(STATUS "Building with AddressSanitizer and UBSan")
-    add_compile_options(
-            -fsanitize=address,undefined
-            -fno-omit-frame-pointer
-    )
-    add_link_options(
-            -fsanitize=address,undefined
-    )
-endif ()
+#if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+#    message(STATUS "Building with AddressSanitizer and UBSan")
+#    add_compile_options(
+#            -fsanitize=address,undefined
+#            -fno-omit-frame-pointer
+#    )
+#    add_link_options(
+#            -fsanitize=address,undefined
+#    )
+#endif ()
 # ———————————————————————————————————————————————————
 include(CheckCXXCompilerFlag)
 

@@ -87,6 +87,55 @@ TEST(LockFreeStackTest, MultiProducerMultiConsumer)
     EXPECT_EQ(results, expected);
 }
 
+TEST(LockFreeStackTest, PushPopStress) {
+    LockFreeStack<int> stack;
+    const unsigned N = std::thread::hardware_concurrency() ?
+                       std::thread::hardware_concurrency()-10 : 4u;
+    const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    std::cout << N << std::endl;
+    std::atomic<int> total_pushes{0};
+    std::atomic<int> total_pops{0};
+    std::vector<std::thread> threads;
+    threads.reserve(N);
+
+    for (unsigned thread = 0; thread < N; ++thread) {
+        threads.emplace_back([&, thread]{
+            std::mt19937_64 rng(thread);
+            while (std::chrono::steady_clock::now() < end) {
+                if ((rng() & 1) == 0) {
+                    // push a random value
+                    stack.push(int(rng()));
+                    ++total_pushes;
+                } else {
+                    // try to pop
+                    if (stack.pop()) {
+                        ++total_pops;
+                    }
+                }
+                // occasional back-off to increase interleavings
+                if ((rng() & 0xF) == 0) {
+                    std::this_thread::yield();
+                }
+            }
+        });
+    }
+
+    for (auto &thread : threads) thread.join();
+    std::cout << total_pushes.load() << std::endl;
+    std::cout << total_pops.load() << std::endl;
+    // sanity: you can't pop more than you pushed
+    EXPECT_LE(total_pops.load(), total_pushes.load());
+
+    // drain remaining items
+    int remaining = 0;
+    while (stack.pop()) {
+        ++remaining;
+    }
+    std::cout << remaining << std::endl;
+    // all pushes == pops + remaining
+    EXPECT_EQ(total_pushes.load(), total_pops.load() + remaining);
+}
+
 //–– Single‐threaded correctness of push / top / pop ––
 TEST(LockFreeStackTest, SingleThreadTopPop) {
     LockFreeStack<int> stack;
@@ -174,7 +223,7 @@ TEST(LockFreeStackTest, MultiProducerPopAndTop) {
         EXPECT_EQ(results[i], i);
     }
 }
-//
+
 // TEST(LockFreeStackTest, MixedPushPopTopStress) {
 //     LockFreeStack<int> stack;
 //     auto threads_n = std::max(2u, 10u);

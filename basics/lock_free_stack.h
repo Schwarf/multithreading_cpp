@@ -33,7 +33,7 @@ private:
     // Multiple threads will concurrently try to insert at (or remove from) the front of the list.
     // We need an atomic compare-and-swap on head so that two pushes or pops can race but only one “wins” at a time,
     // without ever taking a lock.
-    std::atomic<Node*> head{nullptr};
+    std::atomic<Node*> head;
 
 public:
     void push(const T& new_value)
@@ -92,29 +92,34 @@ public:
             {
                 temp_node = old_head;
                 hazard_pointer.store(old_head); // accessing old_head now
-                old_head = head.load(std::memory_order_acquire);
+                old_head = head.load();  // see if head changed
             }
             while (old_head != temp_node);
         }
         // Problem: multiple threads might race to pop the same node. You must ensure only one wins the unlink, and the others retry.
         // Solution: a CAS on head from old_head to old_head->next:
-        while (old_head && !head.compare_exchange_strong(old_head, old_head->next, std::memory_order_acq_rel, std::memory_order_acquire));
-
-        std::shared_ptr<T> result;
-        if (old_head) {
-            // Get the payload
-            result.swap(old_head->data);
-        }
+        while (old_head &&
+            !head.compare_exchange_strong(old_head, old_head->next));
         hazard_pointer.store(nullptr);
-
+        std::shared_ptr<T> result;
         if (old_head)
         {
+            // Get the payload
+            result.swap(old_head->data);
             // Can we delete `old_head` right now, or do we have to defer?
-            reclaim_later(old_head);
+            if (outstanding_hazard_pointers_for(old_head))
+            {
+                // Some other thread still has `old_head` pinned in its hazard slot.
+                // We cannot delete it yet or we’d risk dangling-pointer accesses.
+                reclaim_later(old_head);
+            }
+            else
+            {
+                delete old_head;
+            }
             // Sweep through any previously-deferred nodes
             delete_nodes_with_no_hazards();
         }
-
         return result;
     }
 };
