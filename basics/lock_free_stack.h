@@ -30,47 +30,49 @@ private:
 public:
     void push(const T& new_value)
     {
-        Node* const new_node = new Node(new_value);
+        auto const new_node = new Node(new_value);
         new_node->next = head.load();
         // Typically use 'compare_exchange_weak' in a loop because in can fail spuriously
         while (!head.compare_exchange_weak(new_node->next, new_node));
     }
 
-    std::unique_ptr<T> top() {
-        auto& hp = get_hazard_pointer_for_current_thread();
-        Node* p = nullptr;
+    std::shared_ptr<T> top() {
+        auto& hazard_pointer = get_hazard_pointer_for_current_thread();
+        Node* current = nullptr;
+        // Loop until we load the same head twice under our hazard pointer
         do {
-            p = head.load(std::memory_order_acquire);
-            hp.store(p);
-        } while (p && head.load(std::memory_order_acquire) != p);
+            current = head.load(std::memory_order_acquire);
+            hazard_pointer.store(current);
+            // retry if head changed under us
+        } while (current && head.load(std::memory_order_acquire) != current);
 
-        std::unique_ptr<T> result;
-        if (p) {
-            // clone the payload
-            result = std::make_unique<T>(*p->data);
+        std::shared_ptr<T> result;
+        if (current) {
+            result = current->data;    // atomic bump of the shared_ptr control block
         }
-        hp.store(nullptr);
-        return result;  // nullptr if stack was empty
+        hazard_pointer.store(nullptr);
+        return result;         // empty shared_ptr if stack was empty
     }
+
 
     std::shared_ptr<T> pop()
     {
-        std::atomic<void*>& hp = get_hazard_pointer_for_current_thread();
+        auto & hazard_pointer = get_hazard_pointer_for_current_thread();
         Node* old_head = head.load();
         do
         {
-            Node* temp;
+            Node* temp_node = nullptr;
             do
             {
-                temp = old_head;
-                hp.store(old_head);
+                temp_node = old_head;
+                hazard_pointer.store(old_head);
                 old_head = head.load();
             }
-            while (old_head != temp);
+            while (old_head != temp_node);
         }
         while (old_head &&
             !head.compare_exchange_strong(old_head, old_head->next));
-        hp.store(nullptr);
+        hazard_pointer.store(nullptr);
         std::shared_ptr<T> result;
         if (old_head)
         {
