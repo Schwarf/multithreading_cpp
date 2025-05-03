@@ -136,6 +136,58 @@ TEST(LockFreeStackTest, PushPopStress) {
     EXPECT_EQ(total_pushes.load(), total_pops.load() + remaining);
 }
 
+TEST(LockFreeStackTest, PushTopStress) {
+    LockFreeStack<int> stack;
+
+    const unsigned N = std::thread::hardware_concurrency() ?
+                       std::thread::hardware_concurrency()-10 : 4u;
+
+    // Run for 3 seconds
+    auto end = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+
+    std::atomic<int> total_pushes{0}, total_tops{0};
+    std::vector<std::thread> threads;
+    threads.reserve(N);
+
+    // Each thread randomly pushes or calls top()
+    for (unsigned int thread = 0; thread < N; ++thread) {
+        threads.emplace_back([&, thread]{
+            std::mt19937_64 rng(thread);
+            while (std::chrono::steady_clock::now() < end) {
+                if ((rng() & 1) == 0) {
+                    // push a random value
+                    stack.push(int(rng()));
+                    ++total_pushes;
+                } else {
+                    // peek at the top (non-destructive)
+                    if (stack.top()) {
+                        ++total_tops;
+                    }
+                }
+                // occasional back-off
+                if ((rng() & 0xF) == 0) {
+                    std::this_thread::yield();
+                }
+            }
+        });
+    }
+
+    // Wait for all threads
+    for (auto &thread : threads) thread.join();
+
+    // We should have done at least one push and one top
+    EXPECT_GT(total_pushes.load(), 0u);
+    EXPECT_GT(total_tops.load(), 0u);
+
+    // Now pop everything and count how many were pushed
+    int remaining = 0;
+    while (stack.pop()) {
+        ++remaining;
+    }
+
+    // Since top() never removed items, the total number popped must equal pushes
+    EXPECT_EQ(remaining, total_pushes.load());
+}
 //–– Single‐threaded correctness of push / top / pop ––
 TEST(LockFreeStackTest, SingleThreadTopPop) {
     LockFreeStack<int> stack;
