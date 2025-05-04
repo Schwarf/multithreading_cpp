@@ -2,10 +2,6 @@
 // Created by andreas on 04.05.25.
 //
 #include "./../lock_free_stack.h"
-
-// stress_test.cpp
-
-#include "lock_free_stack.h"
 #include <gtest/gtest.h>
 #include <thread>
 #include <vector>
@@ -42,11 +38,11 @@ TEST(LockFreeStackStressTest, ConcurrentPushPop) {
     threads.reserve(kTotalThreads);
 
     // Pusher threads
-    for (int i = 0; i < kNumThreads; ++i) {
-        threads.emplace_back([&, i]() {
+    for (int thread = 0; thread < kNumThreads; ++thread) {
+        threads.emplace_back([&, thread]() {
             barrier();
             for (int j = 0; j < kOpsPerThread; ++j) {
-                int val = i * kOpsPerThread + j;
+                int val = thread * kOpsPerThread + j;
                 stack.push(val);
                 sum_push.fetch_add(val, std::memory_order_relaxed);
                 push_count.fetch_add(1, std::memory_order_relaxed);
@@ -55,7 +51,7 @@ TEST(LockFreeStackStressTest, ConcurrentPushPop) {
     }
 
     // Popper threads
-    for (int i = 0; i < kNumThreads; ++i) {
+    for (int thread = 0; thread < kNumThreads; ++thread) {
         threads.emplace_back([&]() {
             barrier();
             while (true) {
@@ -76,7 +72,7 @@ TEST(LockFreeStackStressTest, ConcurrentPushPop) {
     }
 
     // Wait for all threads to finish
-    for (auto& t : threads) t.join();
+    for (auto& thread : threads) thread.join();
 
     // Verify that all pushes matched all pops and sums agree
     EXPECT_EQ(push_count.load(), kNumThreads * kOpsPerThread);
@@ -101,10 +97,10 @@ TEST(LockFreeStackTest, PushPopStress) {
     std::vector<std::thread> threads;
     threads.reserve(N);
 
-    for (unsigned tid = 0; tid < N; ++tid) {
-        threads.emplace_back([&, tid]() {
+    for (unsigned thread = 0; thread < N; ++thread) {
+        threads.emplace_back([&, thread]() {
             // Seed each thread’s rng differently
-            std::mt19937_64 rng(std::random_device{}() + tid);
+            std::mt19937_64 rng(std::random_device{}() + thread);
             while (std::chrono::steady_clock::now() < end) {
                 if ((rng() & 1) == 0) {
                     // push a random value
@@ -129,7 +125,7 @@ TEST(LockFreeStackTest, PushPopStress) {
     }
 
     // wait for all threads
-    for (auto &t : threads) t.join();
+    for (auto &thread : threads) thread.join();
 
     // sanity: you can't pop more than you pushed
     EXPECT_LE(total_pops.load(), total_pushes.load());
