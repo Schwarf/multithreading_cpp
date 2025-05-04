@@ -21,10 +21,7 @@ struct Node
 {
     T data;
     Node* next;
-
-    Node(T d): data(d), next(nullptr)
-    {
-    }
+    explicit Node(T data): data(data), next(nullptr) {}
 };
 
 constexpr std::size_t MaxHazardPointers = 50;
@@ -157,7 +154,7 @@ public:
         while (!head.compare_exchange_strong(newMyNode->next, newMyNode));
     }
 
-    T topAndPop()
+    T pop()
     {
         std::atomic<Node*>& hazardPointer = getHazardPointer<T>();
         Node* oldHead = head.load();

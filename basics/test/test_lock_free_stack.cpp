@@ -11,7 +11,7 @@
 TEST(LockFreeStackTest, EmptyStackThrows)
 {
     LockFreeStack<int> stack;
-    EXPECT_THROW(stack.topAndPop(), std::out_of_range);
+    EXPECT_THROW(stack.pop(), std::out_of_range);
 }
 
 TEST(LockFreeStackStressTest, ConcurrentPushPop) {
@@ -60,7 +60,7 @@ TEST(LockFreeStackStressTest, ConcurrentPushPop) {
                     break;
 
                 try {
-                    int v = stack.topAndPop();
+                    int v = stack.pop();
                     sum_pop.fetch_add(v, std::memory_order_relaxed);
                     pop_count.fetch_add(1, std::memory_order_relaxed);
                 } catch (const std::out_of_range&) {
@@ -110,7 +110,7 @@ TEST(LockFreeStackTest, PushPopStress) {
                 } else {
                     // try to pop
                     try {
-                        stack.topAndPop();
+                        stack.pop();
                         total_pops.fetch_add(1, std::memory_order_relaxed);
                     } catch (const std::out_of_range&) {
                         // empty right now — ignore and retry
@@ -134,7 +134,7 @@ TEST(LockFreeStackTest, PushPopStress) {
     size_t remaining = 0;
     while (true) {
         try {
-            stack.topAndPop();
+            stack.pop();
             ++remaining;
         } catch (const std::out_of_range&) {
             break;
@@ -175,7 +175,7 @@ TEST(LockFreeStackTest, PopTopStress) {
                 if ((rng() & 1) == 0) {
                     // try to pop
                     try {
-                        stack.topAndPop();
+                        stack.pop();
                         total_pops.fetch_add(1, std::memory_order_relaxed);
                     } catch (const std::out_of_range&) {
                         // empty right now — skip
@@ -212,6 +212,6 @@ TEST(LockFreeStackTest, PopTopStress) {
     EXPECT_GT(total_tops.load(), 0);
 
     // Finally, stack must now be empty:
-    EXPECT_THROW(stack.topAndPop(), std::out_of_range);
+    EXPECT_THROW(stack.pop(), std::out_of_range);
 }
 
