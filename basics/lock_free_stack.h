@@ -29,17 +29,17 @@ struct Node
 
 constexpr std::size_t MaxHazardPointers = 50;
 
-template <typename T, NodeConcept MyNode = Node<T>>
+template <typename T, NodeConcept Node = Node<T>>
 struct HazardPointer
 {
     std::atomic<std::thread::id> id;
-    std::atomic<MyNode*> pointer;
+    std::atomic<Node*> pointer;
 };
 
 template <typename T>
 HazardPointer<T> HazardPointers[MaxHazardPointers];
 
-template <typename T, NodeConcept MyNode = Node<T>>
+template <typename T, NodeConcept Node = Node<T>>
 class HazardPointerOwner
 {
     HazardPointer<T>* hazardPointer;
@@ -66,7 +66,7 @@ public:
         }
     }
 
-    std::atomic<MyNode*>& getPointer()
+    std::atomic<Node*>& getPointer()
     {
         return hazardPointer->pointer;
     }
@@ -180,6 +180,43 @@ public:
         else delete oldHead;
         retireList.deleteUnusedNodes();
         return res;
+    }
+
+    // --- New: lock‐free, hazard‐pointer‐protected top() ---
+    T top() const
+    {
+        auto& hazardPointer = getHazardPointer<T>();
+        Node* current = head.load(std::memory_order_acquire);
+
+        // Loop until head is stable under protection
+        while (true)
+        {
+            // Protect the candidate
+            hazardPointer.store(current, std::memory_order_release);
+
+            // Reload head and check it didn't change
+            Node* current_updated = head.load(std::memory_order_acquire);
+            if (current_updated == current)
+            {
+                // Either empty (p==nullptr) or stable non-null head
+                break;
+            }
+            // head moved, retry with new pointer
+            current = current_updated;
+        }
+
+        if (!current)
+        {
+            hazardPointer.store(nullptr, std::memory_order_release);
+            throw std::out_of_range("The stack is empty!");
+        }
+
+        // Read data while still protected
+        T result = current->data;
+
+        // Release our hazard pointer
+        hazardPointer.store(nullptr, std::memory_order_release);
+        return result;
     }
 };
 

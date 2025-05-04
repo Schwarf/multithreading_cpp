@@ -144,3 +144,4 @@ TEST(LockFreeStackTest, PushPopStress) {
     // all pushes == pops + remaining
     EXPECT_EQ(total_pushes.load(), total_pops.load() + remaining);
 }
+
