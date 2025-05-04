@@ -9,6 +9,62 @@
 #include <stdexcept>
 #include <thread>
 
+
+constexpr std::size_t MaxHazardPointers = 50;
+
+struct HazardPointer
+{
+    std::atomic<std::thread::id> id;
+    std::atomic<void*> pointer;
+};
+
+inline HazardPointer hazard_pointers[MaxHazardPointers];
+
+class HazardPointerOwner
+{
+    HazardPointer* hazard_pointer;
+
+public:
+    HazardPointerOwner(HazardPointerOwner const&) = delete;
+    HazardPointerOwner operator=(HazardPointerOwner const&) = delete;
+
+    HazardPointerOwner() : hazard_pointer(nullptr)
+    {
+        for (auto &hp : hazard_pointers)
+        {
+            std::thread::id old_id;
+            if (hp.id.compare_exchange_strong(
+                old_id, std::this_thread::get_id()))
+            {
+                hazard_pointer = &hp;
+                break;
+            }
+        }
+        if (!hazard_pointer)
+        {
+            throw std::out_of_range("No hazard pointers available!");
+        }
+    }
+
+    std::atomic<void*>& get_pointer()
+    {
+        return hazard_pointer->pointer;
+    }
+
+    ~HazardPointerOwner()
+    {
+        hazard_pointer->pointer.store(nullptr);
+        hazard_pointer->id.store(std::thread::id());
+    }
+};
+
+inline std::atomic<void*>& get_hazard_pointer()
+{
+    thread_local static HazardPointerOwner hazard;
+    return hazard.get_pointer();
+}
+
+
 template <typename T>
 concept NodeConcept = requires(T a)
 {
@@ -23,64 +79,6 @@ struct Node
     Node* next;
     explicit Node(T data): data(data), next(nullptr) {}
 };
-
-constexpr std::size_t MaxHazardPointers = 50;
-
-template <typename T, NodeConcept Node = Node<T>>
-struct HazardPointer
-{
-    std::atomic<std::thread::id> id;
-    std::atomic<Node*> pointer;
-};
-
-template <typename T>
-HazardPointer<T> HazardPointers[MaxHazardPointers];
-
-template <typename T, NodeConcept Node = Node<T>>
-class HazardPointerOwner
-{
-    HazardPointer<T>* hazardPointer;
-
-public:
-    HazardPointerOwner(HazardPointerOwner const&) = delete;
-    HazardPointerOwner operator=(HazardPointerOwner const&) = delete;
-
-    HazardPointerOwner() : hazardPointer(nullptr)
-    {
-        for (std::size_t i = 0; i < MaxHazardPointers; ++i)
-        {
-            std::thread::id old_id;
-            if (HazardPointers<T>[i].id.compare_exchange_strong(
-                old_id, std::this_thread::get_id()))
-            {
-                hazardPointer = &HazardPointers<T>[i];
-                break;
-            }
-        }
-        if (!hazardPointer)
-        {
-            throw std::out_of_range("No hazard pointers available!");
-        }
-    }
-
-    std::atomic<Node*>& getPointer()
-    {
-        return hazardPointer->pointer;
-    }
-
-    ~HazardPointerOwner()
-    {
-        hazardPointer->pointer.store(nullptr);
-        hazardPointer->id.store(std::thread::id());
-    }
-};
-
-template <typename T, NodeConcept Node = Node<T>>
-std::atomic<Node*>& getHazardPointer()
-{
-    thread_local static HazardPointerOwner<T> hazard;
-    return hazard.getPointer();
-}
 
 template <typename T, NodeConcept Node = Node<T>>
 class RetireList
@@ -111,9 +109,9 @@ class RetireList
 public:
     bool isInUse(Node* node)
     {
-        for (std::size_t i = 0; i < MaxHazardPointers; ++i)
+        for (auto & hp: hazard_pointers)
         {
-            if (HazardPointers<T>[i].pointer.load() == node) return true;
+            if (hp.pointer.load() == node) return true;
         }
         return false;
     }
@@ -156,7 +154,7 @@ public:
 
     T pop()
     {
-        std::atomic<Node*>& hazardPointer = getHazardPointer<T>();
+        auto& hazardPointer = get_hazard_pointer();
         Node* oldHead = head.load();
         do
         {
@@ -182,7 +180,7 @@ public:
     // --- New: lock‐free, hazard‐pointer‐protected top() ---
     T top() const
     {
-        auto& hazardPointer = getHazardPointer<T>();
+        auto& hazardPointer = get_hazard_pointer();
         Node* current = head.load(std::memory_order_acquire);
 
         // Loop until head is stable under protection
