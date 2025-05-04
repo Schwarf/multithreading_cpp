@@ -47,7 +47,7 @@ public:
 
     std::shared_ptr<T> top()
     {
-        auto& hazard_pointer = get_hazard_pointer_for_current_thread();
+        auto& hazard_pointer = get_hazard_pointer();
         Node* current = nullptr;
         // Loop until we load the same head twice under our hazard pointer
         do
@@ -74,7 +74,7 @@ public:
     // and only delete nodes not currently announced.
     std::shared_ptr<T> pop()
     {
-        auto& hazard_pointer = get_hazard_pointer_for_current_thread();
+        auto& hazard_pointer = get_hazard_pointer();
         Node* old_head = head.load();
 
         // Problem: between the moment we load head into old_head and the moment we store that pointer in our hazard

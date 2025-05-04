@@ -10,7 +10,7 @@
 #include <thread>
 
 
-constexpr std::size_t MaxHazardPointers = 50;
+constexpr std::size_t max_hazard_pointers = 50;
 
 struct HazardPointer
 {
@@ -18,7 +18,7 @@ struct HazardPointer
     std::atomic<void*> pointer;
 };
 
-inline HazardPointer hazard_pointers[MaxHazardPointers];
+inline HazardPointer hazard_pointers[max_hazard_pointers];
 
 class HazardPointerOwner
 {
@@ -30,7 +30,7 @@ public:
 
     HazardPointerOwner() : hazard_pointer(nullptr)
     {
-        for (auto &hp : hazard_pointers)
+        for (auto& hp : hazard_pointers)
         {
             std::thread::id old_id;
             if (hp.id.compare_exchange_strong(
@@ -77,7 +77,10 @@ struct Node
 {
     T data;
     Node* next;
-    explicit Node(T data): data(data), next(nullptr) {}
+
+    explicit Node(T data): data(data), next(nullptr)
+    {
+    }
 };
 
 template <typename T, NodeConcept Node = Node<T>>
@@ -88,7 +91,7 @@ class RetireList
         Node* node;
         RetiredNode* next;
 
-        RetiredNode(Node* p) : node(p), next(nullptr)
+        explicit RetiredNode(Node* p) : node(p), next(nullptr)
         {
         }
 
@@ -109,7 +112,7 @@ class RetireList
 public:
     bool isInUse(Node* node)
     {
-        for (auto & hp: hazard_pointers)
+        for (auto& hp : hazard_pointers)
         {
             if (hp.pointer.load() == node) return true;
         }
@@ -154,27 +157,30 @@ public:
 
     T pop()
     {
-        auto& hazardPointer = get_hazard_pointer();
-        Node* oldHead = head.load();
+        auto& hazard_pointer = get_hazard_pointer();
+        Node* old_head = head.load();
         do
         {
-            Node* tempMyNode;
+            Node* temp_node;
             do
             {
-                tempMyNode = oldHead;
-                hazardPointer.store(oldHead);
-                oldHead = head.load();
+                temp_node = old_head;
+                hazard_pointer.store(old_head);
+                old_head = head.load();
             }
-            while (oldHead != tempMyNode);
+            while (old_head != temp_node);
         }
-        while (oldHead && !head.compare_exchange_strong(oldHead, oldHead->next)) ;
-        if (!oldHead) throw std::out_of_range("The stack is empty!");
-        hazardPointer.store(nullptr);
-        auto res = oldHead->data;
-        if (retireList.isInUse(oldHead)) retireList.addNode(oldHead);
-        else delete oldHead;
+        while (old_head && !head.compare_exchange_strong(old_head, old_head->next)) ;
+        if (!old_head)
+            throw std::out_of_range("The stack is empty!");
+        hazard_pointer.store(nullptr);
+        auto result = old_head->data;
+        if (retireList.isInUse(old_head))
+            retireList.addNode(old_head);
+        else
+            delete old_head;
         retireList.deleteUnusedNodes();
-        return res;
+        return result;
     }
 
     // --- New: lock‐free, hazard‐pointer‐protected top() ---

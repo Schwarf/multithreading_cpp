@@ -55,7 +55,7 @@ public:
     }
 };
 
-inline std::atomic<void*>& get_hazard_pointer_for_current_thread()
+inline std::atomic<void*>& get_hazard_pointer()
 {
     thread_local static HazardPointerOwner hazard;
     return hazard.get_pointer();
