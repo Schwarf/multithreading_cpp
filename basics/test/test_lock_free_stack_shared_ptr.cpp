@@ -12,7 +12,7 @@
 #include <vector>
 #include "lock_free_stack_shared_ptr.h"
 
-TEST(LockFreeStackTest, MultiProducerMultiConsumer)
+TEST(LockFreeStackSharedPtrTest, MultiProducerMultiConsumer)
 {
     LockFreeStackSharedPtr<int> stack;
     constexpr int producer_count = 4;
@@ -89,7 +89,7 @@ TEST(LockFreeStackTest, MultiProducerMultiConsumer)
 
 
 //–– Single‐threaded correctness of push / top / pop ––
-TEST(LockFreeStackTest, SingleThreadPushPop) {
+TEST(LockFreeStackSharedPtrTest, SingleThreadPushPop) {
     LockFreeStackSharedPtr<int> stack;
     // empty → top() == nullptr
     EXPECT_EQ(stack.pop(), nullptr);
@@ -112,7 +112,7 @@ TEST(LockFreeStackTest, SingleThreadPushPop) {
 
 
 //–– Multiple producers -> single‐threaded pop + top check ––
-TEST(LockFreeStackTest, MultiProducerPopAndTop) {
+TEST(LockFreeStackSharedPtrTest, MultiProducerPopAndTop) {
     LockFreeStackSharedPtr<int> stack;
     constexpr int producer_count = 4;
     constexpr int operations = 1000;
@@ -150,7 +150,7 @@ TEST(LockFreeStackTest, MultiProducerPopAndTop) {
     }
 }
 
-TEST(LockFreeStackTest, PushPopStress) {
+TEST(LockFreeStackSharedPtrTest, PushPopStress) {
     LockFreeStackSharedPtr<int> stack;
     const unsigned N = std::thread::hardware_concurrency() ?
                        std::thread::hardware_concurrency()-10 : 4u;
@@ -199,7 +199,7 @@ TEST(LockFreeStackTest, PushPopStress) {
     EXPECT_EQ(total_pushes.load(), total_pops.load() + remaining);
 }
 
-// TEST(LockFreeStackTest, PushTopStress) {
+// TEST(LockFreeStackSharedPtrTest, PushTopStress) {
 //     LockFreeStack<int> stack;
 //
 //     const unsigned N = std::thread::hardware_concurrency() ?
@@ -252,7 +252,7 @@ TEST(LockFreeStackTest, PushPopStress) {
 //     EXPECT_EQ(remaining, total_pushes.load());
 // }
 
-// TEST(LockFreeStackTest, PopTopStress) {
+// TEST(LockFreeStackSharedPtrTest, PopTopStress) {
 //     LockFreeStack<int> stack;
 //     const unsigned N = std::thread::hardware_concurrency() ?
 //                        std::thread::hardware_concurrency()-10 : 4u;
@@ -311,7 +311,7 @@ TEST(LockFreeStackTest, PushPopStress) {
 // }
 
 
-// TEST(LockFreeStackTest, MixedPushPopTopStress) {
+// TEST(LockFreeStackSharedPtrTest, MixedPushPopTopStress) {
 //     LockFreeStack<int> stack;
 //     auto threads_n = std::max(2u, 10u);
 //
