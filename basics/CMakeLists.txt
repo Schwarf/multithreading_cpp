@@ -42,7 +42,7 @@ add_subdirectory(test)
 
 add_executable(trivial_deadlock trivial_deadlock.cpp)
 add_executable(try_out compiler_dependent_output.cpp)
-add_library(containers INTERFACE thread_safe_stack.h thread_safe_list.h lock_free_stack.h)
+add_library(containers INTERFACE thread_safe_stack.h thread_safe_list.h lock_free_stack_shared_ptr.h)
 
 target_link_libraries(trivial_deadlock pthread)
 target_link_libraries(try_out pthread)

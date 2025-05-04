@@ -10,11 +10,11 @@
 #include <random>
 #include <thread>
 #include <vector>
-#include "lock_free_stack.h"
+#include "lock_free_stack_shared_ptr.h"
 
 TEST(LockFreeStackTest, MultiProducerMultiConsumer)
 {
-    LockFreeStack<int> stack;
+    LockFreeStackSharedPtr<int> stack;
     constexpr int producer_count = 4;
     constexpr int consumer_count = 4;
     constexpr int operations = 1000;
@@ -90,7 +90,7 @@ TEST(LockFreeStackTest, MultiProducerMultiConsumer)
 
 //–– Single‐threaded correctness of push / top / pop ––
 TEST(LockFreeStackTest, SingleThreadPushPop) {
-    LockFreeStack<int> stack;
+    LockFreeStackSharedPtr<int> stack;
     // empty → top() == nullptr
     EXPECT_EQ(stack.pop(), nullptr);
 
@@ -113,7 +113,7 @@ TEST(LockFreeStackTest, SingleThreadPushPop) {
 
 //–– Multiple producers -> single‐threaded pop + top check ––
 TEST(LockFreeStackTest, MultiProducerPopAndTop) {
-    LockFreeStack<int> stack;
+    LockFreeStackSharedPtr<int> stack;
     constexpr int producer_count = 4;
     constexpr int operations = 1000;
     constexpr int total_items = producer_count * operations;
@@ -151,7 +151,7 @@ TEST(LockFreeStackTest, MultiProducerPopAndTop) {
 }
 
 TEST(LockFreeStackTest, PushPopStress) {
-    LockFreeStack<int> stack;
+    LockFreeStackSharedPtr<int> stack;
     const unsigned N = std::thread::hardware_concurrency() ?
                        std::thread::hardware_concurrency()-10 : 4u;
     const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);

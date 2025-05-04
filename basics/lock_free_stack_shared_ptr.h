@@ -10,7 +10,7 @@
 #include "reclamation.h"
 
 template <typename T>
-class LockFreeStack
+class LockFreeStackSharedPtr
 {
 private:
     struct Node
