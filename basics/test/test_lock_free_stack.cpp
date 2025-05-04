@@ -145,3 +145,73 @@ TEST(LockFreeStackTest, PushPopStress) {
     EXPECT_EQ(total_pushes.load(), total_pops.load() + remaining);
 }
 
+
+TEST(LockFreeStackTest, PopTopStress) {
+    LockFreeStack<int> stack;
+
+    // 1) Single‐threaded push
+    constexpr int item_count = 100000;
+    for (int i = 0; i < item_count; ++i) {
+        stack.push(i);
+    }
+
+    // 2) Now N threads concurrently pop or top
+    const unsigned N = std::thread::hardware_concurrency()
+                       ? std::thread::hardware_concurrency() - 10
+                       : 4u;
+
+    std::atomic<int> total_pops{0}, total_tops{0};
+    std::vector<std::thread> threads;
+    threads.reserve(N);
+
+    for (unsigned tid = 0; tid < N; ++tid) {
+        threads.emplace_back([&, tid]{
+            std::mt19937_64 rng(tid);
+            while (true) {
+                int popped_so_far = total_pops.load(std::memory_order_relaxed);
+                if (popped_so_far >= item_count)
+                    break;
+
+                if ((rng() & 1) == 0) {
+                    // try to pop
+                    try {
+                        stack.topAndPop();
+                        total_pops.fetch_add(1, std::memory_order_relaxed);
+                    } catch (const std::out_of_range&) {
+                        // empty right now — skip
+                    }
+                } else {
+                    // peek at top
+                    try {
+                        volatile int v = stack.top();  // volatile to prevent optimizing out
+                        (void)v;
+                        total_tops.fetch_add(1, std::memory_order_relaxed);
+                    } catch (const std::out_of_range&) {
+                        // empty — skip
+                    }
+                }
+
+                // occasional back-off
+                if ((rng() & 0xF) == 0) {
+                    std::this_thread::yield();
+                }
+            }
+        });
+    }
+
+    for (auto &t : threads) {
+        t.join();
+    }
+
+    // 3) Validate
+
+    // We must have popped exactly all pushed items:
+    EXPECT_EQ(total_pops.load(), item_count);
+
+    // And since we did tops under contention, we should have seen some:
+    EXPECT_GT(total_tops.load(), 0);
+
+    // Finally, stack must now be empty:
+    EXPECT_THROW(stack.topAndPop(), std::out_of_range);
+}
+
