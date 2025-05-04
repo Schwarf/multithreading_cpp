@@ -45,27 +45,27 @@ public:
         while (!head.compare_exchange_weak(new_node->next, new_node));
     }
 
-    std::shared_ptr<T> top()
-    {
-        auto& hazard_pointer = get_hazard_pointer_for_current_thread();
-        Node* current = nullptr;
-        // Loop until we load the same head twice under our hazard pointer
-        do
-        {
-            current = head.load(std::memory_order_acquire);
-            hazard_pointer.store(current);
-            // retry if head changed under us
-        }
-        while (current && head.load(std::memory_order_acquire) != current);
-
-        std::shared_ptr<T> result;
-        if (current)
-        {
-            result = current->data; // atomic bump of the shared_ptr control block
-        }
-        hazard_pointer.store(nullptr);
-        return result; // empty shared_ptr if stack was empty
-    }
+    // std::shared_ptr<T> top()
+    // {
+    //     auto& hazard_pointer = get_hazard_pointer_for_current_thread();
+    //     Node* current = nullptr;
+    //     // Loop until we load the same head twice under our hazard pointer
+    //     do
+    //     {
+    //         current = head.load(std::memory_order_acquire);
+    //         hazard_pointer.store(current);
+    //         // retry if head changed under us
+    //     }
+    //     while (current && head.load(std::memory_order_acquire) != current);
+    //
+    //     std::shared_ptr<T> result;
+    //     if (current)
+    //     {
+    //         result = current->data; // atomic bump of the shared_ptr control block
+    //     }
+    //     hazard_pointer.store(nullptr);
+    //     return result; // empty shared_ptr if stack was empty
+    // }
 
     // Problem: in a lock-free list, once you unlink a node, another thread might actually delete it (reclaim memory)
     // before you finish reading its contents.

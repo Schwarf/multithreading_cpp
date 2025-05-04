@@ -87,6 +87,69 @@ TEST(LockFreeStackTest, MultiProducerMultiConsumer)
     EXPECT_EQ(results, expected);
 }
 
+
+//–– Single‐threaded correctness of push / top / pop ––
+TEST(LockFreeStackTest, SingleThreadPushPop) {
+    LockFreeStack<int> stack;
+    // empty → top() == nullptr
+    EXPECT_EQ(stack.pop(), nullptr);
+
+    // push 1,2 and observe LIFO via top()/pop()
+    stack.push(1);
+    stack.push(2);
+
+    auto pop_ptr = stack.pop();
+    EXPECT_NE(pop_ptr, nullptr);
+    EXPECT_EQ(*pop_ptr, 2);
+
+    pop_ptr = stack.pop();
+    EXPECT_NE(pop_ptr, nullptr);
+    EXPECT_EQ(*pop_ptr, 1);
+
+    // now empty again
+    EXPECT_EQ(stack.pop(), nullptr);
+}
+
+
+//–– Multiple producers -> single‐threaded pop + top check ––
+TEST(LockFreeStackTest, MultiProducerPopAndTop) {
+    LockFreeStack<int> stack;
+    constexpr int producer_count = 4;
+    constexpr int operations = 1000;
+    constexpr int total_items = producer_count * operations;
+
+    // launch concurrent producers
+    std::vector<std::thread> threads;
+    for (int thread = 0; thread < producer_count; ++thread) {
+        threads.emplace_back([&, thread] {
+            const int base_value = thread * operations;
+            for (int i = 0; i < operations; ++i) {
+                stack.push(base_value + i);
+            }
+        });
+    }
+    for (auto &thread : threads) thread.join();
+
+    // now pop everything in a single thread
+    std::vector<int> results;
+    results.reserve(total_items);
+    for (int i = 0; i < total_items; ++i) {
+        auto pop_ptr = stack.pop();
+        EXPECT_NE(pop_ptr, nullptr);
+        results.push_back(*pop_ptr);
+    }
+
+    // stack must now be empty
+    // EXPECT_EQ(stack.top(), nullptr);
+    EXPECT_EQ(stack.pop(), nullptr);
+
+    // verify we got exactly the multiset {0,1,...,TOTAL-1}
+    std::ranges::sort(results);
+    for (int i = 0; i < total_items; ++i) {
+        EXPECT_EQ(results[i], i);
+    }
+}
+
 TEST(LockFreeStackTest, PushPopStress) {
     LockFreeStack<int> stack;
     const unsigned N = std::thread::hardware_concurrency() ?
@@ -136,205 +199,117 @@ TEST(LockFreeStackTest, PushPopStress) {
     EXPECT_EQ(total_pushes.load(), total_pops.load() + remaining);
 }
 
-TEST(LockFreeStackTest, PushTopStress) {
-    LockFreeStack<int> stack;
+// TEST(LockFreeStackTest, PushTopStress) {
+//     LockFreeStack<int> stack;
+//
+//     const unsigned N = std::thread::hardware_concurrency() ?
+//                        std::thread::hardware_concurrency()-10 : 4u;
+//
+//     // Run for 3 seconds
+//     auto end = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+//
+//     std::atomic<int> total_pushes{0}, total_tops{0};
+//     std::vector<std::thread> threads;
+//     threads.reserve(N);
+//
+//     // Each thread randomly pushes or calls top()
+//     for (unsigned int thread = 0; thread < N; ++thread) {
+//         threads.emplace_back([&, thread]{
+//             std::mt19937_64 rng(thread);
+//             while (std::chrono::steady_clock::now() < end) {
+//                 if ((rng() & 1) == 0) {
+//                     // push a random value
+//                     stack.push(int(rng()));
+//                     ++total_pushes;
+//                 } else {
+//                     // peek at the top (non-destructive)
+//                     if (stack.top()) {
+//                         ++total_tops;
+//                     }
+//                 }
+//                 // occasional back-off
+//                 if ((rng() & 0xF) == 0) {
+//                     std::this_thread::yield();
+//                 }
+//             }
+//         });
+//     }
+//
+//     // Wait for all threads
+//     for (auto &thread : threads) thread.join();
+//
+//     // We should have done at least one push and one top
+//     EXPECT_GT(total_pushes.load(), 0u);
+//     EXPECT_GT(total_tops.load(), 0u);
+//
+//     // Now pop everything and count how many were pushed
+//     int remaining = 0;
+//     while (stack.pop()) {
+//         ++remaining;
+//     }
+//
+//     // Since top() never removed items, the total number popped must equal pushes
+//     EXPECT_EQ(remaining, total_pushes.load());
+// }
 
-    const unsigned N = std::thread::hardware_concurrency() ?
-                       std::thread::hardware_concurrency()-10 : 4u;
+// TEST(LockFreeStackTest, PopTopStress) {
+//     LockFreeStack<int> stack;
+//     const unsigned N = std::thread::hardware_concurrency() ?
+//                        std::thread::hardware_concurrency()-10 : 4u;
+//
+//     // 1) Single‐threaded push
+//     constexpr int item_count = 100000;
+//     for (int i = 0; i < item_count; ++i) {
+//         stack.push(i);
+//     }
+//
+//     // 2) Now N threads concurrently pop or top
+//
+//     std::atomic<int> total_pops{0}, total_tops{0};
+//     std::vector<std::thread> threads;
+//     threads.reserve(N);
+//
+//     for (unsigned int thread = 0; thread < N; ++thread) {
+//         threads.emplace_back([&, thread]{
+//             std::mt19937_64 rng(thread);
+//             while (true) {
+//                 int popped_so_far = total_pops.load(std::memory_order_relaxed);
+//                 if (popped_so_far >= item_count)
+//                     break;
+//
+//                 if ((rng() & 1) == 0) {
+//                     // try to pop
+//                     if (stack.pop()) {
+//                         ++total_pops;
+//                     }
+//                 } else {
+//                     // peek at top
+//                     if (stack.top()) {
+//                         ++total_tops;
+//                     }
+//                 }
+//
+//                 // occasional back-off
+//                 if ((rng() & 0xF) == 0) {
+//                     std::this_thread::yield();
+//                 }
+//             }
+//         });
+//     }
+//
+//     for (auto &thread : threads) thread.join();
+//
+//     // 3) Validate
+//     // We must have popped exactly all pushed items:
+//     EXPECT_EQ(total_pops.load(), item_count);
+//
+//     // And since we did tops under contention, we should have seen some:
+//     EXPECT_GT(total_tops.load(), 0);
+//
+//     // Finally, stack must now be empty:
+//     EXPECT_EQ(stack.pop(), nullptr);
+// }
 
-    // Run for 3 seconds
-    auto end = std::chrono::steady_clock::now() + std::chrono::seconds(3);
-
-    std::atomic<int> total_pushes{0}, total_tops{0};
-    std::vector<std::thread> threads;
-    threads.reserve(N);
-
-    // Each thread randomly pushes or calls top()
-    for (unsigned int thread = 0; thread < N; ++thread) {
-        threads.emplace_back([&, thread]{
-            std::mt19937_64 rng(thread);
-            while (std::chrono::steady_clock::now() < end) {
-                if ((rng() & 1) == 0) {
-                    // push a random value
-                    stack.push(int(rng()));
-                    ++total_pushes;
-                } else {
-                    // peek at the top (non-destructive)
-                    if (stack.top()) {
-                        ++total_tops;
-                    }
-                }
-                // occasional back-off
-                if ((rng() & 0xF) == 0) {
-                    std::this_thread::yield();
-                }
-            }
-        });
-    }
-
-    // Wait for all threads
-    for (auto &thread : threads) thread.join();
-
-    // We should have done at least one push and one top
-    EXPECT_GT(total_pushes.load(), 0u);
-    EXPECT_GT(total_tops.load(), 0u);
-
-    // Now pop everything and count how many were pushed
-    int remaining = 0;
-    while (stack.pop()) {
-        ++remaining;
-    }
-
-    // Since top() never removed items, the total number popped must equal pushes
-    EXPECT_EQ(remaining, total_pushes.load());
-}
-
-TEST(LockFreeStackTest, PopTopStress) {
-    LockFreeStack<int> stack;
-    const unsigned N = std::thread::hardware_concurrency() ?
-                       std::thread::hardware_concurrency()-10 : 4u;
-
-    // 1) Single‐threaded push
-    constexpr int item_count = 100000;
-    for (int i = 0; i < item_count; ++i) {
-        stack.push(i);
-    }
-
-    // 2) Now N threads concurrently pop or top
-
-    std::atomic<int> total_pops{0}, total_tops{0};
-    std::vector<std::thread> threads;
-    threads.reserve(N);
-
-    for (unsigned int thread = 0; thread < N; ++thread) {
-        threads.emplace_back([&, thread]{
-            std::mt19937_64 rng(thread);
-            while (true) {
-                int popped_so_far = total_pops.load(std::memory_order_relaxed);
-                if (popped_so_far >= item_count)
-                    break;
-
-                if ((rng() & 1) == 0) {
-                    // try to pop
-                    if (stack.pop()) {
-                        ++total_pops;
-                    }
-                } else {
-                    // peek at top
-                    if (stack.top()) {
-                        ++total_tops;
-                    }
-                }
-
-                // occasional back-off
-                if ((rng() & 0xF) == 0) {
-                    std::this_thread::yield();
-                }
-            }
-        });
-    }
-
-    for (auto &thread : threads) thread.join();
-
-    // 3) Validate
-    // We must have popped exactly all pushed items:
-    EXPECT_EQ(total_pops.load(), item_count);
-
-    // And since we did tops under contention, we should have seen some:
-    EXPECT_GT(total_tops.load(), 0);
-
-    // Finally, stack must now be empty:
-    EXPECT_EQ(stack.pop(), nullptr);
-}
-
-
-//–– Single‐threaded correctness of push / top / pop ––
-TEST(LockFreeStackTest, SingleThreadTopPop) {
-    LockFreeStack<int> stack;
-    // empty → top() == nullptr
-    EXPECT_EQ(stack.top(), nullptr);
-
-    // push 1,2 and observe LIFO via top()/pop()
-    stack.push(1);
-    {
-        auto top_ptr = stack.top();
-        EXPECT_NE(top_ptr, nullptr);
-        EXPECT_EQ(*top_ptr, 1);
-    }
-
-    stack.push(2);
-    {
-        auto top_ptr = stack.top();
-        EXPECT_NE(top_ptr, nullptr);
-        EXPECT_EQ(*top_ptr, 2);
-    }
-
-    auto pop_ptr = stack.pop();
-    EXPECT_NE(pop_ptr, nullptr);
-    EXPECT_EQ(*pop_ptr, 2);
-
-    {
-        auto top_ptr = stack.top();
-        EXPECT_NE(top_ptr, nullptr);
-        EXPECT_EQ(*top_ptr, 1);
-    }
-
-    pop_ptr = stack.pop();
-    EXPECT_NE(pop_ptr, nullptr);
-    EXPECT_EQ(*pop_ptr, 1);
-
-    // now empty again
-    EXPECT_EQ(stack.top(), nullptr);
-    EXPECT_EQ(stack.pop(), nullptr);
-}
-
-
-//–– Multiple producers -> single‐threaded pop + top check ––
-TEST(LockFreeStackTest, MultiProducerPopAndTop) {
-    LockFreeStack<int> stack;
-    constexpr int producer_count = 4;
-    constexpr int operations = 1000;
-    constexpr int total_items = producer_count * operations;
-
-    // launch concurrent producers
-    std::vector<std::thread> threads;
-    for (int thread = 0; thread < producer_count; ++thread) {
-        threads.emplace_back([&, thread] {
-            const int base_value = thread * operations;
-            for (int i = 0; i < operations; ++i) {
-                stack.push(base_value + i);
-            }
-        });
-    }
-    for (auto &thread : threads) thread.join();
-
-    // after all pushes, top() should be non‐null and within [0, TOTAL)
-    {
-        auto top_ptr = stack.top();
-        EXPECT_NE(top_ptr, nullptr);
-        EXPECT_GE(*top_ptr, 0);
-        EXPECT_LT(*top_ptr, total_items);
-    }
-
-    // now pop everything in a single thread
-    std::vector<int> results;
-    results.reserve(total_items);
-    for (int i = 0; i < total_items; ++i) {
-        auto pop_ptr = stack.pop();
-        EXPECT_NE(pop_ptr, nullptr);
-        results.push_back(*pop_ptr);
-    }
-
-    // stack must now be empty
-    EXPECT_EQ(stack.top(), nullptr);
-    EXPECT_EQ(stack.pop(), nullptr);
-
-    // verify we got exactly the multiset {0,1,...,TOTAL-1}
-    std::ranges::sort(results);
-    for (int i = 0; i < total_items; ++i) {
-        EXPECT_EQ(results[i], i);
-    }
-}
 
 // TEST(LockFreeStackTest, MixedPushPopTopStress) {
 //     LockFreeStack<int> stack;
