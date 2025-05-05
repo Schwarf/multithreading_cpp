@@ -150,9 +150,9 @@ public:
 
     void push(T val)
     {
-        Node* const newMyNode = new Node(val);
-        newMyNode->next = head.load();
-        while (!head.compare_exchange_strong(newMyNode->next, newMyNode));
+        Node* const new_node = new Node(val);
+        new_node->next = head.load();
+        while (!head.compare_exchange_strong(new_node->next, new_node));
     }
 
     T pop()
