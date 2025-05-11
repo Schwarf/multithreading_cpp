@@ -164,9 +164,9 @@ TEST(LockFreeStackTest, PopTopStress) {
     std::vector<std::thread> threads;
     threads.reserve(N);
 
-    for (unsigned tid = 0; tid < N; ++tid) {
-        threads.emplace_back([&, tid]{
-            std::mt19937_64 rng(tid);
+    for (unsigned thread_id = 0; thread_id < N; ++thread_id) {
+        threads.emplace_back([&, thread_id]{
+            std::mt19937_64 rng(thread_id);
             while (true) {
                 int popped_so_far = total_pops.load(std::memory_order_relaxed);
                 if (popped_so_far >= item_count)
@@ -215,3 +215,48 @@ TEST(LockFreeStackTest, PopTopStress) {
     EXPECT_THROW(stack.pop(), std::out_of_range);
 }
 
+TEST(LockFreeStackTest, MixedPushPopTopStress) {
+    LockFreeStack<int> stack;
+    auto threads_n = std::max(2u, 10u);
+
+    std::atomic<int> pushes{0}, pops{0}, tops{0};
+    auto stop_time = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+
+    std::vector<std::thread> threads;
+    threads.reserve(threads_n);
+
+    for (unsigned thread_id = 0; thread_id < threads_n; ++thread_id) {
+        threads.emplace_back([&, stop_time, thread_id] {
+            std::mt19937_64 rng(thread_id);
+            while (std::chrono::steady_clock::now() < stop_time) {
+                switch (rng() % 3) {
+                  case 0:
+                      stack.push(int(rng()));
+                      ++pushes;
+                      break;
+                    case 1:
+                        if (stack.pop())
+                            ++pops;
+                        break;
+                      default:
+                          if (stack.top())
+                              ++tops;
+                          break;
+                      }
+                      if ((rng() & 0xF) == 0)
+                          std::this_thread::yield();
+                  }
+              });
+    }
+
+    for (auto& t : threads) t.join();
+
+    EXPECT_LE(pops.load(), pushes.load());
+
+    int remaining = 0;
+    while (stack.pop()) ++remaining;
+    EXPECT_EQ(pushes.load(), pops.load() + remaining);
+
+    // It's vanishingly unlikely to be zero, but if you really need to guarantee:
+    EXPECT_GT(tops.load(), 0);
+}
