@@ -183,6 +183,12 @@ public:
         return result;
     }
 
+    bool empty() const noexcept
+    {
+        // acquire‐load pairs with pushes/releases to guarantee we see an up-to-date head
+        return head.load(std::memory_order_acquire) == nullptr;
+    }
+    
     // --- New: lock‐free, hazard‐pointer‐protected top() ---
     T top() const
     {
