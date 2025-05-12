@@ -62,4 +62,3 @@ inline std::atomic<void*>& get_hazard_pointer()
 }
 
 #endif //HAZARD_POINTER_H
-
