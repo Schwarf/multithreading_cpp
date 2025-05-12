@@ -14,18 +14,21 @@ TEST(LockFreeStackTest, EmptyStackThrows)
     EXPECT_THROW(stack.pop(), std::out_of_range);
 }
 
-TEST(LockFreeStackStressTest, ConcurrentPushPop) {
-    constexpr int kNumThreads     = 4;         // number of pushers and number of poppers
-    constexpr int kOpsPerThread   = 100000;    // ops per thread
-    constexpr int kTotalThreads   = kNumThreads * 2;
+TEST(LockFreeStackStressTest, ConcurrentPushPop)
+{
+    constexpr int kNumThreads = 4; // number of pushers and number of poppers
+    constexpr int kOpsPerThread = 100000; // ops per thread
+    constexpr int kTotalThreads = kNumThreads * 2;
 
     LockFreeStack<int> stack;
 
     // Barrier for synchronizing thread start
     std::atomic<int> barrier_count{0};
-    auto barrier = [&](){
+    auto barrier = [&]()
+    {
         barrier_count.fetch_add(1, std::memory_order_acq_rel);
-        while (barrier_count.load(std::memory_order_acquire) < kTotalThreads) {
+        while (barrier_count.load(std::memory_order_acquire) < kTotalThreads)
+        {
             std::this_thread::yield();
         }
     };
@@ -38,10 +41,13 @@ TEST(LockFreeStackStressTest, ConcurrentPushPop) {
     threads.reserve(kTotalThreads);
 
     // Pusher threads
-    for (int thread = 0; thread < kNumThreads; ++thread) {
-        threads.emplace_back([&, thread]() {
+    for (int thread = 0; thread < kNumThreads; ++thread)
+    {
+        threads.emplace_back([&, thread]()
+        {
             barrier();
-            for (int j = 0; j < kOpsPerThread; ++j) {
+            for (int j = 0; j < kOpsPerThread; ++j)
+            {
                 int val = thread * kOpsPerThread + j;
                 stack.push(val);
                 sum_push.fetch_add(val, std::memory_order_relaxed);
@@ -51,19 +57,25 @@ TEST(LockFreeStackStressTest, ConcurrentPushPop) {
     }
 
     // Popper threads
-    for (int thread = 0; thread < kNumThreads; ++thread) {
-        threads.emplace_back([&]() {
+    for (int thread = 0; thread < kNumThreads; ++thread)
+    {
+        threads.emplace_back([&]()
+        {
             barrier();
-            while (true) {
+            while (true)
+            {
                 // Stop once we've popped everything
                 if (pop_count.load(std::memory_order_acquire) >= kNumThreads * kOpsPerThread)
                     break;
 
-                try {
+                try
+                {
                     int v = stack.pop();
                     sum_pop.fetch_add(v, std::memory_order_relaxed);
                     pop_count.fetch_add(1, std::memory_order_relaxed);
-                } catch (const std::out_of_range&) {
+                }
+                catch (const std::out_of_range&)
+                {
                     // Stack empty right now — retry
                     std::this_thread::yield();
                 }
@@ -76,17 +88,18 @@ TEST(LockFreeStackStressTest, ConcurrentPushPop) {
 
     // Verify that all pushes matched all pops and sums agree
     EXPECT_EQ(push_count.load(), kNumThreads * kOpsPerThread);
-    EXPECT_EQ(pop_count.load(),  kNumThreads * kOpsPerThread);
+    EXPECT_EQ(pop_count.load(), kNumThreads * kOpsPerThread);
     EXPECT_EQ(sum_push.load(), pop_count.load() ? sum_pop.load() : 0LL);
 }
 
-TEST(LockFreeStackTest, PushPopStress) {
+TEST(LockFreeStackTest, PushPopStress)
+{
     LockFreeStack<int> stack;
 
     // # of threads: hardware_concurrency()-1, or fallback to 4
     const unsigned N = std::thread::hardware_concurrency()
-                       ? std::thread::hardware_concurrency() - 1
-                       : 4u;
+                           ? std::thread::hardware_concurrency() - 1
+                           : 4u;
 
     // Run for 5 seconds
     const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
@@ -97,27 +110,37 @@ TEST(LockFreeStackTest, PushPopStress) {
     std::vector<std::thread> threads;
     threads.reserve(N);
 
-    for (unsigned thread = 0; thread < N; ++thread) {
-        threads.emplace_back([&, thread]() {
+    for (unsigned thread = 0; thread < N; ++thread)
+    {
+        threads.emplace_back([&, thread]()
+        {
             // Seed each thread’s rng differently
             std::mt19937_64 rng(std::random_device{}() + thread);
-            while (std::chrono::steady_clock::now() < end) {
-                if ((rng() & 1) == 0) {
+            while (std::chrono::steady_clock::now() < end)
+            {
+                if ((rng() & 1) == 0)
+                {
                     // push a random value
                     int v = int(rng());
                     stack.push(v);
                     total_pushes.fetch_add(1, std::memory_order_relaxed);
-                } else {
+                }
+                else
+                {
                     // try to pop
-                    try {
+                    try
+                    {
                         stack.pop();
                         total_pops.fetch_add(1, std::memory_order_relaxed);
-                    } catch (const std::out_of_range&) {
+                    }
+                    catch (const std::out_of_range&)
+                    {
                         // empty right now — ignore and retry
                     }
                 }
                 // occasional back-off to increase interleavings
-                if ((rng() & 0xF) == 0) {
+                if ((rng() & 0xF) == 0)
+                {
                     std::this_thread::yield();
                 }
             }
@@ -125,18 +148,22 @@ TEST(LockFreeStackTest, PushPopStress) {
     }
 
     // wait for all threads
-    for (auto &thread : threads) thread.join();
+    for (auto& thread : threads) thread.join();
 
     // sanity: you can't pop more than you pushed
     EXPECT_LE(total_pops.load(), total_pushes.load());
 
     // drain remaining items
     size_t remaining = 0;
-    while (true) {
-        try {
+    while (true)
+    {
+        try
+        {
             stack.pop();
             ++remaining;
-        } catch (const std::out_of_range&) {
+        }
+        catch (const std::out_of_range&)
+        {
             break;
         }
     }
@@ -146,78 +173,81 @@ TEST(LockFreeStackTest, PushPopStress) {
 }
 
 
-TEST(LockFreeStackTest, PopTopStress) {
+TEST(LockFreeStackTest, PopTopStress)
+{
     LockFreeStack<int> stack;
 
     // 1) Single‐threaded push
     constexpr int item_count = 100000;
-    for (int i = 0; i < item_count; ++i) {
+    for (int i = 0; i < item_count; ++i)
+    {
         stack.push(i);
     }
 
     // 2) Now N threads concurrently pop or top
-    const unsigned N = std::thread::hardware_concurrency()
-                       ? std::thread::hardware_concurrency() - 10
-                       : 4u;
+    const unsigned N = std::thread::hardware_concurrency() > 10
+                           ? std::thread::hardware_concurrency() - 10
+                           : 4u;
 
-    std::atomic<int> total_pops{0}, total_tops{0};
+    std::atomic<int> total_pops{0};
+    std::atomic<int> total_tops{0};
     std::vector<std::thread> threads;
     threads.reserve(N);
 
-    for (unsigned thread_id = 0; thread_id < N; ++thread_id) {
-        threads.emplace_back([&, thread_id]{
+    for (unsigned thread_id = 0; thread_id < N; ++thread_id)
+    {
+        threads.emplace_back([&, thread_id]
+        {
             std::mt19937_64 rng(thread_id);
-            while (true) {
+            while (true)
+            {
                 int popped_so_far = total_pops.load(std::memory_order_relaxed);
                 if (popped_so_far >= item_count)
                     break;
 
-                if ((rng() & 1) == 0) {
+                if ((rng() & 1) == 0)
+                {
                     // try to pop
-                    try {
-                        stack.pop();
+                    if (auto v = stack.pop())
+                    {
                         total_pops.fetch_add(1, std::memory_order_relaxed);
-                    } catch (const std::out_of_range&) {
-                        // empty right now — skip
                     }
-                } else {
+                }
+                else
+                {
                     // peek at top
-                    try {
-                        volatile int v = stack.top();  // volatile to prevent optimizing out
-                        (void)v;
+                    if (auto v = stack.top())
+                    {
                         total_tops.fetch_add(1, std::memory_order_relaxed);
-                    } catch (const std::out_of_range&) {
-                        // empty — skip
                     }
                 }
 
                 // occasional back-off
-                if ((rng() & 0xF) == 0) {
+                if ((rng() & 0xF) == 0)
+                {
                     std::this_thread::yield();
                 }
             }
         });
     }
 
-    for (auto &t : threads) {
-        t.join();
+    for (auto& thread : threads)
+    {
+        thread.join();
     }
 
     // 3) Validate
-
     // We must have popped exactly all pushed items:
     EXPECT_EQ(total_pops.load(), item_count);
-
     // And since we did tops under contention, we should have seen some:
     EXPECT_GT(total_tops.load(), 0);
-
     // Finally, stack must now be empty:
-    EXPECT_THROW(stack.pop(), std::out_of_range);
+    EXPECT_FALSE(stack.pop().has_value());
 }
 
 
-
-TEST(LockFreeStackTest, MixedPushPopTopStress) {
+TEST(LockFreeStackTest, MixedPushPopTopStress)
+{
     LockFreeStack<int> stack;
 
     // fixed thread count of 10 (at least 2)
@@ -229,48 +259,63 @@ TEST(LockFreeStackTest, MixedPushPopTopStress) {
     std::vector<std::thread> threads;
     threads.reserve(threads_n);
 
-    for (unsigned tid = 0; tid < threads_n; ++tid) {
-        threads.emplace_back([&, tid] {
+    for (unsigned tid = 0; tid < threads_n; ++tid)
+    {
+        threads.emplace_back([&, tid]
+        {
             std::mt19937_64 rng(tid);
-            while (std::chrono::steady_clock::now() < stop_time) {
-                switch (rng() % 3) {
-                  case 0: {
-                    // push
-                    stack.push(int(rng()));
-                    pushes.fetch_add(1, std::memory_order_relaxed);
-                    break;
-                  }
-                  case 1: {
-                    // pop (destructive)
-                    try {
-                      stack.pop();
-                      pops.fetch_add(1, std::memory_order_relaxed);
-                    } catch (const std::out_of_range&) {
-                      // empty — skip
+            while (std::chrono::steady_clock::now() < stop_time)
+            {
+                switch (rng() % 3)
+                {
+                case 0:
+                    {
+                        // push
+                        stack.push(int(rng()));
+                        pushes.fetch_add(1, std::memory_order_relaxed);
+                        break;
                     }
-                    break;
-                  }
-                  default: {
-                    // peek at top (non‐destructive)
-                    try {
-                      volatile int v = stack.top();  // volatile to prevent optimizing out
-                      (void)v;
-                      tops.fetch_add(1, std::memory_order_relaxed);
-                    } catch (const std::out_of_range&) {
-                      // empty — skip
+                case 1:
+                    {
+                        // pop (destructive)
+                        try
+                        {
+                            stack.pop();
+                            pops.fetch_add(1, std::memory_order_relaxed);
+                        }
+                        catch (const std::out_of_range&)
+                        {
+                            // empty — skip
+                        }
+                        break;
                     }
-                    break;
-                  }
+                default:
+                    {
+                        // peek at top (non‐destructive)
+                        try
+                        {
+                            volatile int v = stack.top(); // volatile to prevent optimizing out
+                            (void)v;
+                            tops.fetch_add(1, std::memory_order_relaxed);
+                        }
+                        catch (const std::out_of_range&)
+                        {
+                            // empty — skip
+                        }
+                        break;
+                    }
                 }
                 // occasional back-off
-                if ((rng() & 0xF) == 0) {
+                if ((rng() & 0xF) == 0)
+                {
                     std::this_thread::yield();
                 }
             }
         });
     }
 
-    for (auto &t : threads) {
+    for (auto& t : threads)
+    {
         t.join();
     }
 
@@ -279,11 +324,15 @@ TEST(LockFreeStackTest, MixedPushPopTopStress) {
 
     // drain remaining items
     int remaining = 0;
-    while (true) {
-        try {
+    while (true)
+    {
+        try
+        {
             stack.pop();
             ++remaining;
-        } catch (const std::out_of_range&) {
+        }
+        catch (const std::out_of_range&)
+        {
             break;
         }
     }
