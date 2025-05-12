@@ -11,7 +11,7 @@
 TEST(LockFreeStackTest, EmptyStackThrows)
 {
     LockFreeStack<int> stack;
-    EXPECT_THROW(stack.pop(), std::out_of_range);
+    EXPECT_FALSE(stack.pop().has_value());
 }
 
 TEST(LockFreeStackStressTest, ConcurrentPushPop)
@@ -68,16 +68,10 @@ TEST(LockFreeStackStressTest, ConcurrentPushPop)
                 if (pop_count.load(std::memory_order_acquire) >= kNumThreads * kOpsPerThread)
                     break;
 
-                try
+                if (auto v = stack.pop())
                 {
-                    int v = stack.pop();
-                    sum_pop.fetch_add(v, std::memory_order_relaxed);
+                    sum_pop.fetch_add(v.value(), std::memory_order_relaxed);
                     pop_count.fetch_add(1, std::memory_order_relaxed);
-                }
-                catch (const std::out_of_range&)
-                {
-                    // Stack empty right now — retry
-                    std::this_thread::yield();
                 }
             }
         });
@@ -128,15 +122,8 @@ TEST(LockFreeStackTest, PushPopStress)
                 else
                 {
                     // try to pop
-                    try
-                    {
-                        stack.pop();
+                    if (auto v = stack.pop())
                         total_pops.fetch_add(1, std::memory_order_relaxed);
-                    }
-                    catch (const std::out_of_range&)
-                    {
-                        // empty right now — ignore and retry
-                    }
                 }
                 // occasional back-off to increase interleavings
                 if ((rng() & 0xF) == 0)
@@ -155,17 +142,9 @@ TEST(LockFreeStackTest, PushPopStress)
 
     // drain remaining items
     size_t remaining = 0;
-    while (true)
+    while (auto v = stack.pop())
     {
-        try
-        {
-            stack.pop();
             ++remaining;
-        }
-        catch (const std::out_of_range&)
-        {
-            break;
-        }
     }
 
     // all pushes == pops + remaining
@@ -186,7 +165,7 @@ TEST(LockFreeStackTest, PopTopStress)
 
     // 2) Now N threads concurrently pop or top
     const unsigned N = std::thread::hardware_concurrency() > 10
-                           ? std::thread::hardware_concurrency() - 10
+                           ? std::thread::hardware_concurrency()
                            : 4u;
 
     std::atomic<int> total_pops{0};
@@ -278,31 +257,14 @@ TEST(LockFreeStackTest, MixedPushPopTopStress)
                 case 1:
                     {
                         // pop (destructive)
-                        try
-                        {
-                            stack.pop();
+                        if (auto v = stack.pop())
                             pops.fetch_add(1, std::memory_order_relaxed);
-                        }
-                        catch (const std::out_of_range&)
-                        {
-                            // empty — skip
-                        }
-                        break;
                     }
                 default:
                     {
                         // peek at top (non‐destructive)
-                        try
-                        {
-                            volatile int v = stack.top(); // volatile to prevent optimizing out
-                            (void)v;
+                        if (auto v = stack.top())
                             tops.fetch_add(1, std::memory_order_relaxed);
-                        }
-                        catch (const std::out_of_range&)
-                        {
-                            // empty — skip
-                        }
-                        break;
                     }
                 }
                 // occasional back-off
@@ -324,17 +286,9 @@ TEST(LockFreeStackTest, MixedPushPopTopStress)
 
     // drain remaining items
     int remaining = 0;
-    while (true)
+    while (auto v = stack.pop())
     {
-        try
-        {
-            stack.pop();
             ++remaining;
-        }
-        catch (const std::out_of_range&)
-        {
-            break;
-        }
     }
     EXPECT_EQ(pushes.load(), pops.load() + remaining);
 
