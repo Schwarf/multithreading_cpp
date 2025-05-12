@@ -4,19 +4,18 @@
 
 #ifndef HAZARD_POINTER_H
 #define HAZARD_POINTER_H
-#include <atomic>
-#include <thread>
+#include <cstddef>
 #include <stdexcept>
 
-unsigned int constexpr max_hazard_pointers = 100;
+constexpr std::size_t max_hazard_pointers = 50;
 
 struct HazardPointer
 {
-    std::atomic<std::thread::id> id{std::thread::id()};
-    std::atomic<void*> pointer{nullptr};
+    std::atomic<std::thread::id> id;
+    std::atomic<void*> pointer;
 };
 
-inline HazardPointer hazard_pointers[max_hazard_pointers] = {};
+inline HazardPointer hazard_pointers[max_hazard_pointers];
 
 class HazardPointerOwner
 {
@@ -26,12 +25,13 @@ public:
     HazardPointerOwner(HazardPointerOwner const&) = delete;
     HazardPointerOwner operator=(HazardPointerOwner const&) = delete;
 
-    HazardPointerOwner(): hazard_pointer(nullptr)
+    HazardPointerOwner() : hazard_pointer(nullptr)
     {
         for (auto& hp : hazard_pointers)
         {
             std::thread::id old_id;
-            if (hp.id.compare_exchange_strong(old_id, std::this_thread::get_id()))
+            if (hp.id.compare_exchange_strong(
+                old_id, std::this_thread::get_id()))
             {
                 hazard_pointer = &hp;
                 break;
@@ -39,7 +39,7 @@ public:
         }
         if (!hazard_pointer)
         {
-            throw std::runtime_error("No hazard pointers available");
+            throw std::out_of_range("No hazard pointers available!");
         }
     }
 
@@ -61,15 +61,5 @@ inline std::atomic<void*>& get_hazard_pointer()
     return hazard.get_pointer();
 }
 
-inline bool outstanding_hazard_pointers_for(void* pointer)
-{
-    for (auto& hazard_pointer : hazard_pointers)
-    {
-        if (hazard_pointer.pointer.load() == pointer)
-        {
-            return true;
-        }
-    }
-    return false;
-}
 #endif //HAZARD_POINTER_H
+
