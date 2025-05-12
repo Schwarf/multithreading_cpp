@@ -173,7 +173,7 @@ public:
         while (old_head && !head.compare_exchange_strong(old_head, old_head->next)) ;
         if (!old_head)
         {
-            hazard_pointer.store(nullptr);
+            hazard_pointer.store(nullptr, std::memory_order_relaxed);
             return std::nullopt;
         }
 
@@ -194,7 +194,7 @@ public:
     }
 
     // --- New: lock‐free, hazard‐pointer‐protected top() ---
-    T top() const
+    std::optional<T> top() const
     {
         auto& hazardPointer = get_hazard_pointer();
         Node* current = head.load(std::memory_order_acquire);
@@ -219,7 +219,7 @@ public:
         if (!current)
         {
             hazardPointer.store(nullptr, std::memory_order_release);
-            throw std::out_of_range("The stack is empty!");
+            return std::nullopt;
         }
 
         // Read data while still protected
