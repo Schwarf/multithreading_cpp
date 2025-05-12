@@ -7,28 +7,11 @@
 #include <atomic>
 #include <thread>
 #include <optional>
-
 #include "hazard_pointer.h"
 
-template <typename T>
-concept NodeConcept = requires(T a)
-{
-    { T::data };
-    { *a.next } -> std::same_as<T&>;
-};
 
-template <typename T>
-struct Node
-{
-    T data;
-    Node* next;
 
-    explicit Node(T data): data(data), next(nullptr)
-    {
-    }
-};
-
-template <typename T, NodeConcept Node = Node<T>>
+template <typename Node, typename Deleter = std::default_delete<Node>>
 class RetireList
 {
     struct RetiredNode
@@ -42,7 +25,7 @@ class RetireList
 
         ~RetiredNode()
         {
-            delete node;
+            Deleter{}(node);
         }
     };
 
@@ -82,11 +65,28 @@ public:
     }
 };
 
-template <typename T, NodeConcept Node = Node<T>>
+template <typename T>
+concept NodeConcept = requires(T a)
+{
+    { T::data };
+    { *a.next } -> std::same_as<T&>;
+};
+
+template <typename T>
+struct StackNode
+{
+    T data;
+    StackNode* next;
+
+    explicit StackNode(T data): data(data), next(nullptr)
+    {
+    }
+};
+template <typename T>
 class LockFreeStack
 {
-    std::atomic<Node*> head;
-    RetireList<T> retireList;
+    std::atomic<StackNode<T>*> head;
+    RetireList<StackNode<T>> retireList;
 
 public:
     LockFreeStack() = default;
@@ -95,7 +95,7 @@ public:
 
     void push(T val)
     {
-        Node* const new_node = new Node(val);
+        StackNode<T>* const new_node = new StackNode<T>(val);
         new_node->next = head.load();
         while (!head.compare_exchange_strong(new_node->next, new_node));
     }
@@ -103,10 +103,10 @@ public:
     std::optional<T> pop()
     {
         auto& hazard_pointer = get_hazard_pointer();
-        Node* old_head = head.load();
+        StackNode<T>* old_head = head.load();
         do
         {
-            Node* temp_node;
+            StackNode<T>* temp_node;
             do
             {
                 temp_node = old_head;
@@ -142,7 +142,7 @@ public:
     std::optional<T> top() const
     {
         auto& hazardPointer = get_hazard_pointer();
-        Node* current = head.load(std::memory_order_acquire);
+        StackNode<T>* current = head.load(std::memory_order_acquire);
 
         // Loop until head is stable under protection
         while (true)
@@ -151,7 +151,7 @@ public:
             hazardPointer.store(current, std::memory_order_release);
 
             // Reload head and check it didn't change
-            Node* current_updated = head.load(std::memory_order_acquire);
+            StackNode<T>* current_updated = head.load(std::memory_order_acquire);
             if (current_updated == current)
             {
                 // Either empty (p==nullptr) or stable non-null head
