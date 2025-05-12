@@ -14,9 +14,9 @@ TEST(LockFreeStackTest, EmptyStackThrows)
     EXPECT_FALSE(stack.pop().has_value());
 }
 
-TEST(LockFreeStackStressTest, ConcurrentPushPop)
+TEST(LockFreeStackTest, ConcurrentPushPop)
 {
-    constexpr int kNumThreads = 4; // number of pushers and number of poppers
+    constexpr int kNumThreads = 20; // number of pushers and number of poppers
     constexpr int kOpsPerThread = 100000; // ops per thread
     constexpr int kTotalThreads = kNumThreads * 2;
 
@@ -144,7 +144,7 @@ TEST(LockFreeStackTest, PushPopStress)
     size_t remaining = 0;
     while (auto v = stack.pop())
     {
-            ++remaining;
+        ++remaining;
     }
 
     // all pushes == pops + remaining
@@ -276,9 +276,9 @@ TEST(LockFreeStackTest, MixedPushPopTopStress)
         });
     }
 
-    for (auto& t : threads)
+    for (auto& thread : threads)
     {
-        t.join();
+        thread.join();
     }
 
     // you can't pop more than you pushed
@@ -288,7 +288,7 @@ TEST(LockFreeStackTest, MixedPushPopTopStress)
     int remaining = 0;
     while (auto v = stack.pop())
     {
-            ++remaining;
+        ++remaining;
     }
     EXPECT_EQ(pushes.load(), pops.load() + remaining);
 
