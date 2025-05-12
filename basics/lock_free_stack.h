@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <thread>
-
+#include <optional>
 
 constexpr std::size_t max_hazard_pointers = 50;
 
@@ -155,7 +155,7 @@ public:
         while (!head.compare_exchange_strong(new_node->next, new_node));
     }
 
-    T pop()
+    std::optional<T> pop()
     {
         auto& hazard_pointer = get_hazard_pointer();
         Node* old_head = head.load();
@@ -172,9 +172,13 @@ public:
         }
         while (old_head && !head.compare_exchange_strong(old_head, old_head->next)) ;
         if (!old_head)
-            throw std::out_of_range("The stack is empty!");
+        {
+            hazard_pointer.store(nullptr);
+            return std::nullopt;
+        }
+
         hazard_pointer.store(nullptr);
-        auto result = old_head->data;
+        T result = old_head->data;
         if (retireList.isInUse(old_head))
             retireList.addNode(old_head);
         else
@@ -188,7 +192,7 @@ public:
         // acquire‐load pairs with pushes/releases to guarantee we see an up-to-date head
         return head.load(std::memory_order_acquire) == nullptr;
     }
-    
+
     // --- New: lock‐free, hazard‐pointer‐protected top() ---
     T top() const
     {
