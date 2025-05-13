@@ -7,7 +7,6 @@ include_directories(${GTEST_INCLUDE_DIRS})
 add_executable(basics
         test_thread_safe_stack.cpp
         test_lock_free_stack_shared_ptr.cpp
-        test_lock_free_stack.cpp
         test_thread_safe_queue.cpp)
 
 include_directories(./../)
