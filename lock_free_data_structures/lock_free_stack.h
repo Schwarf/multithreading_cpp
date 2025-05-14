@@ -63,11 +63,11 @@ public:
 
         hazard_pointer.store(nullptr);
         T result = old_head->data;
-        if (retireList.isInUse(old_head))
-            retireList.addNode(old_head);
+        if (retireList.is_in_use(old_head))
+            retireList.add_node(old_head);
         else
             delete old_head;
-        retireList.deleteUnusedNodes();
+        retireList.delete_unused_nodes();
         return result;
     }
 

@@ -25,40 +25,40 @@ class RetireList
 
     std::atomic<RetiredNode*> RetiredNodes;
 
-    void addToRetiredNodes(RetiredNode* retiredNode)
+    void add_to_retired_nodes(RetiredNode* retiredNode)
     {
         retiredNode->next = RetiredNodes.load();
         while (!RetiredNodes.compare_exchange_strong(retiredNode->next, retiredNode));
     }
 
 public:
-    bool isInUse(Node* node)
+    bool is_in_use(Node* node)
     {
         for (auto& hp : hazard_pointers)
         {
-            if (hp.pointer.load() == node) return true;
+            if (hp.pointer.load() == node)
+                return true;
         }
         return false;
     }
 
-    void addNode(Node* node)
+    void add_node(Node* node)
     {
-        addToRetiredNodes(new RetiredNode(node));
+        add_to_retired_nodes(new RetiredNode(node));
     }
 
-    void deleteUnusedNodes()
+    void delete_unused_nodes()
     {
         RetiredNode* current = RetiredNodes.exchange(nullptr);
         while (current)
         {
             RetiredNode* const next = current->next;
-            if (!isInUse(current->node)) delete current;
-            else addToRetiredNodes(current);
+            if (!is_in_use(current->node)) delete current;
+            else add_to_retired_nodes(current);
             current = next;
         }
     }
 };
-
 
 
 #endif //RECLAMATION_H
