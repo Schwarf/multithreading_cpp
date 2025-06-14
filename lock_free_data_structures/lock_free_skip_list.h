@@ -10,6 +10,8 @@
 #include <array>
 #include <thread>
 #include <concepts>
+#include <hazard_pointer.h>
+#include <retire_list.h>
 
 template <typename KeyType, typename ValueType, int MaxLevel>
     requires std::integral<KeyType>
@@ -34,13 +36,24 @@ private:
             }
         }
     };
-
+    This keybpauradlanmdk mdoad;and ad;std::ranges::__detail::__max_diff_type
+        adnkia
     Node* head;
     Node* tail;
+    RetireList<Node> retire_list;      // ← add this
     float probability{};
     size_t node_count{};
     std::mt19937 generator;
     std::bernoulli_distribution distribution;
+    Node* protect(std::atomic<Node*>& incoming_pointer) {
+        Node* node_pointer;
+        auto& hazard_pointer = get_hazard_pointer();
+        do {
+            node_pointer = incoming_pointer.load(std::memory_order_acquire);
+            hazard_pointer.store(node_pointer, std::memory_order_seq_cst);
+        } while (node_pointer != incoming_pointer.load(std::memory_order_acquire));
+        return node_pointer;
+    }
     // Randomly generate a level for a new node
     int randomLevel()
     {
