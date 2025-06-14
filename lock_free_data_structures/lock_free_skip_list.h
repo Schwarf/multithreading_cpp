@@ -36,11 +36,9 @@ private:
             }
         }
     };
-    This keybpauradlanmdk mdoad;and ad;std::ranges::__detail::__max_diff_type
-        adnkia
     Node* head;
     Node* tail;
-    RetireList<Node> retire_list;      // ← add this
+    RetireList<Node> retire_list;
     float probability{};
     size_t node_count{};
     std::mt19937 generator;
