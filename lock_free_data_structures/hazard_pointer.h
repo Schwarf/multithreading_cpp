@@ -53,9 +53,9 @@ public:
     {
         for (auto& hp : hazard_pointers)
         {
-            std::thread::id old_id;
-            if (hp.id.compare_exchange_strong(
-                old_id, std::this_thread::get_id()))
+            // Try to install this thread's ID into an empty slot.
+            // If the id of hp is empty it has not yet been claimed
+            if (std::thread::id no_owner; hp.id.compare_exchange_strong(no_owner, std::this_thread::get_id()))
             {
                 hazard_pointer = &hp;
                 break;
@@ -67,7 +67,7 @@ public:
         }
     }
 
-    std::atomic<void*>& get_pointer()
+    std::atomic<void*>& get_pointer() const
     {
         return hazard_pointer->pointer;
     }
