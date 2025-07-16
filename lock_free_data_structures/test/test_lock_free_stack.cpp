@@ -232,7 +232,10 @@ TEST(LockFreeStackTest, MixedPushPopTopStress)
     // fixed thread count of 10 (at least 2)
     const unsigned threads_n = std::max(2u, 10u);
 
-    std::atomic<int> pushes{0}, pops{0}, tops{0};
+    std::atomic<int> pushes{0};
+    std::atomic<int> pops{0};
+    std::atomic<int> tops{0};
+    // we run for three seconds
     auto stop_time = std::chrono::steady_clock::now() + std::chrono::seconds(3);
 
     std::vector<std::thread> threads;
