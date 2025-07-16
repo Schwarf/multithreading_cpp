@@ -67,11 +67,21 @@ public:
         }
     }
 
+    /**
+     * @brief Access the underlying atomic pointer for protection.
+     * @return Reference to the thread‑local atomic<void*> hazard pointer.
+     */
     std::atomic<void*>& get_pointer() const
     {
         return hazard_pointer->pointer;
     }
 
+    /**
+     * @brief Release the hazard pointer and free the slot.
+     *
+     * Clears the pointer and resets the owner ID, making the slot
+     * available for other threads.
+     */
     ~HazardPointerOwner()
     {
         hazard_pointer->pointer.store(nullptr);
@@ -79,9 +89,18 @@ public:
     }
 };
 
+
+/**
+ * @brief Get the calling thread's hazard pointer.
+ *
+ * Internally creates a thread‑local HazardPointerOwner, so each thread
+ * only ever claims one slot.  Returns a reference to the protected pointer.
+ *
+ * @return Reference to a thread‑local hazard pointer atomic.
+ */
 inline std::atomic<void*>& get_hazard_pointer()
 {
-    thread_local static HazardPointerOwner hazard;
+    thread_local HazardPointerOwner hazard;
     return hazard.get_pointer();
 }
 
