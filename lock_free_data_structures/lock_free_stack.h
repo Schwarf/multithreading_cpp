@@ -55,6 +55,7 @@ public:
         // thread-local hazard pointer to prevent premature deletion
         auto& hazard_pointer = get_hazard_pointer();
         StackNode<T>* old_head = head.load();
+        // Remove safely top-node (head) from the stack, but do not delete it (yet)
         do
         {
             StackNode<T>* temp_node;
@@ -70,16 +71,19 @@ public:
             }
             while (old_head != temp_node);  // Retry if head changed after publishing hazard pointer
         }
-        while (old_head && !head.compare_exchange_strong(old_head, old_head->next)); // Retry until we successfully remove the node that we safely protected
+        while (old_head && !head.compare_exchange_strong(old_head, old_head->next)); // Retry until we successfully remove the top-node that we safely protected
 
         if (!old_head)
         {
             hazard_pointer.store(nullptr, std::memory_order_relaxed);
             return std::nullopt;
         }
-
+        // Unset hazard pointer
         hazard_pointer.store(nullptr);
+        // Extract data
         T result = old_head->data;
+        // Check if old_head is still in use if so add it to the retire list
+        // if not simply delete it
         if (retireList.is_in_use(old_head))
             retireList.add_node(old_head);
         else

@@ -54,8 +54,10 @@ public:
         while (current)
         {
             RetiredNode* const next = current->next;
-            if (!is_in_use(current->node)) delete current;
-            else add_to_retired_nodes(current);
+            if (!is_in_use(current->node))
+                delete current;
+            else
+                add_to_retired_nodes(current);
             current = next;
         }
     }
