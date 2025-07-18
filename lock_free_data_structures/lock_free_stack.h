@@ -5,10 +5,11 @@
 #ifndef LOCK_FREE_STACK_H
 #define LOCK_FREE_STACK_H
 #include <atomic>
+
 #include <thread>
 #include <optional>
-#include "hazard_pointer.h"
 #include "retire_list.h"
+#include "hazard_pointer.h"
 
 template <typename T>
 struct StackNode
@@ -32,6 +33,15 @@ public:
     LockFreeStack(const LockFreeStack&) = delete;
     LockFreeStack& operator=(const LockFreeStack&) = delete;
 
+    /**
+     * @brief Pushes a value onto the top of the stack.
+     *
+     * This operation is lock-free and thread-safe. In the presence of
+     * multiple threads, the order in which elements are pushed is
+     * not guaranteed. The most recent successful push will be at the top.
+     *
+     * @param value The value to be pushed onto the stack.
+     */
     void push(T val)
     {
         StackNode<T>* const new_node = new StackNode<T>(val);
@@ -39,8 +49,10 @@ public:
         while (!head.compare_exchange_strong(new_node->next, new_node));
     }
 
+
     std::optional<T> pop()
     {
+        // thread-local hazard pointer to prevent premature deletion
         auto& hazard_pointer = get_hazard_pointer();
         StackNode<T>* old_head = head.load();
         do
@@ -55,6 +67,7 @@ public:
             while (old_head != temp_node);
         }
         while (old_head && !head.compare_exchange_strong(old_head, old_head->next)) ;
+
         if (!old_head)
         {
             hazard_pointer.store(nullptr, std::memory_order_relaxed);

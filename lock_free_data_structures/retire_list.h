@@ -4,6 +4,7 @@
 
 #ifndef RECLAMATION_H
 #define RECLAMATION_H
+#include "hazard_pointer.h"
 
 template <typename Node, typename Deleter = std::default_delete<Node>>
 class RetireList
