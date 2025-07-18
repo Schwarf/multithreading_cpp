@@ -61,12 +61,16 @@ public:
             do
             {
                 temp_node = old_head;
+                // Prevent use-after-free:
+                // Publish the intention to access old_head by storing it into the hazard pointer
                 hazard_pointer.store(old_head);
+                // Re-check head: If another thread popped and replaced it,
+                // old_head might have been deleted and reused — retry until stable
                 old_head = head.load();
             }
-            while (old_head != temp_node);
+            while (old_head != temp_node);  // Retry if head changed after publishing hazard pointer
         }
-        while (old_head && !head.compare_exchange_strong(old_head, old_head->next)) ;
+        while (old_head && !head.compare_exchange_strong(old_head, old_head->next)); // Retry until we successfully remove the node that we safely protected
 
         if (!old_head)
         {
