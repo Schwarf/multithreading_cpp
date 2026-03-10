@@ -5,7 +5,7 @@
 // This file does not contain any buffering but a sequentially write-then-read-buffer.
 #include <vector>
 
-#include "common.h"
+#include "sample_produce_consumer.h"
 
 int main()
 {

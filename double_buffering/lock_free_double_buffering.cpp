@@ -2,7 +2,7 @@
 #include <thread>
 #include <vector>
 
-#include "common.h"
+#include "sample_produce_consumer.h"
 
 struct LockFreeDoubleBuffer
 {
