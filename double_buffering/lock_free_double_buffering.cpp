@@ -12,11 +12,11 @@ struct LockFreeDoubleBuffer
 
 int main()
 {
-    constexpr int iterations = 100;
+    constexpr int iterations = 10000000;
 
     LockFreeDoubleBuffer db;
-    db.buffers[0].resize(1 << 20);
-    db.buffers[1].resize(1 << 20);
+    db.buffers[0].resize(1 << 6);
+    db.buffers[1].resize(1 << 6);
 
     std::atomic<int> produced{0};
     std::atomic<int> consumed{0};

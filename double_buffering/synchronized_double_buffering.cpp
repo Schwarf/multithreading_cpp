@@ -10,11 +10,11 @@ int main()
 {
     std::vector<int> data1;
     std::vector<int> data2;
-    data1.resize(1 << 20);
-    data2.resize(1 << 20);
+    data1.resize(1 << 6);
+    data2.resize(1 << 6);
     std::binary_semaphore signal_start_processing_data{0};
     std::binary_semaphore signal_start_generating_data{1};
-    constexpr int iterations{100};
+    constexpr int iterations{10000000};
     auto data_generator = [&]()
     {
         for(int i{}; i < iterations; ++i)
