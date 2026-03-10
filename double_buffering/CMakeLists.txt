@@ -11,14 +11,16 @@ add_executable(baseline
         baseline.cpp
 )
 
-#add_executable(shared_memory_reader
-#        reader.cpp
-#)
+add_executable(double_buffering double_buffering.cpp
+)
 
 target_include_directories(baseline PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-#target_include_directories(baseline PRIVATE
-#        ${CMAKE_CURRENT_SOURCE_DIR}
-#)
+find_package(Threads REQUIRED)
+
+target_link_libraries(double_buffering PRIVATE Threads::Threads)
+target_include_directories(double_buffering PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
