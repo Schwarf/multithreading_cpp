@@ -79,3 +79,39 @@ TEST(RingBufferTest, WrapAroundWorks)
     EXPECT_EQ(value, 4);
 }
 
+// Real use case with multiple threads
+
+TEST(RingBufferTest, SingleProducerSingleConsumer)
+{
+    const int N = 100000;
+
+    RingBuffer<int> buffer(1024);
+
+    std::atomic<int> produced{0};
+    std::atomic<int> consumed{0};
+
+    std::thread producer([&]()
+    {
+        for (int i = 0; i < N; ++i)
+        {
+            while (!buffer.push(i)) {}
+            produced++;
+        }
+    });
+
+    std::thread consumer([&]()
+    {
+        int value{};
+        for (int i = 0; i < N; ++i)
+        {
+            while (!buffer.pop(value)) {}
+            consumed++;
+        }
+    });
+
+    producer.join();
+    consumer.join();
+
+    EXPECT_EQ(produced.load(), N);
+    EXPECT_EQ(consumed.load(), N);
+}
