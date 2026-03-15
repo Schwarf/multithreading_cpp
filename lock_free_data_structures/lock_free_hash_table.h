@@ -9,7 +9,7 @@
 // a parallelized top-down approach
 #include <atomic>
 #include <vector>
-// The hash-table size is allocated once at compile time and it uses a simple modular hash.
+// The hash-table size is allocated once at compile time and, it uses a simple modular hash.
 // This requires that the problem size (number of hash values) must be estimated before.
 
 template <typename KeyType, typename ValueType, KeyType NO_KEY, ValueType NO_VALUE, size_t TableSize>
