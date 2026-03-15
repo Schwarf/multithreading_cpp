@@ -20,7 +20,7 @@ public:
         size_t head = head_.load(std::memory_order_relaxed);
         // determeine where the next index points to
         size_t next = (head + 1) % capacity_;
-
+        // check if buffer is full
         if (next == tail_.load(std::memory_order_acquire))
             return false;
         buffer_[head] = item;
@@ -31,6 +31,7 @@ public:
     bool pop(T& item)
     {
         size_t tail = tail_.load(std::memory_order_relaxed);
+        // check if buffer is empty
         if (tail == head_.load(std::memory_order_acquire))
             return false;
         item = buffer_[tail];
