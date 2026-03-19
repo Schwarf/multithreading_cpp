@@ -20,9 +20,13 @@ int main()
         for(int i{}; i < iterations; ++i)
         {
             generate_data(data1);
-            // Wait until current processing work is done
+            // Wait until the processor has released permission to continue.
+            // acquire() consumes that permission, so the semaphore becomes unavailable again
+            // until another thread calls release().
             signal_start_generating_data.acquire();
+
             data1.swap(data2);
+            // Signal that freshly generated data is now ready for processing.
             signal_start_processing_data.release();
         }
     };
@@ -30,9 +34,13 @@ int main()
     {
         for(int i{}; i < iterations; ++i)
         {
-            // Wait until the current data generation is done
+            // Wait until the generator has released permission to process data.
+            // acquire() consumes that permission, so the semaphore becomes unavailable again
+            // until another thread calls release().
             signal_start_processing_data.acquire();
             process_data(data2);
+
+            // Signal that processing is finished and the generator may continue.
             signal_start_generating_data.release();
         }
     };

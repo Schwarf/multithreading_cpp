@@ -16,7 +16,7 @@ public:
 
     bool push(const T& item)
     {
-        // Only producer thread can modify or write to head_
+        // Only a producer thread can modify or write to head_
         // The consumer thread only reads it.
         size_t head = head_.load(std::memory_order_relaxed);
         // Compute the next write position (circular wrap-around)
