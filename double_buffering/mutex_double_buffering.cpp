@@ -2,7 +2,7 @@
 // Created by andreas on 19.03.26.
 //
 #include <condition_variable>
-#include <jthread>
+#include <thread>
 #include <mutex>
 #include <vector>
 
@@ -18,8 +18,6 @@ int main()
     // true  -> processor may process the published buffer
     // false -> generator may generate/swap the next buffer
     bool data_ready = false;
-
-    constexpr int iterations{100000};
 
     auto data_generator = [&]()
     {

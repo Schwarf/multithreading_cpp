@@ -12,7 +12,7 @@ struct LockFreeDoubleBuffer
 
 int main()
 {
-    constexpr int iterations = 10000000;
+
 
     LockFreeDoubleBuffer db;
     db.buffers[0].resize(1 << 6);

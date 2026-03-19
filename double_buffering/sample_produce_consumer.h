@@ -29,6 +29,7 @@
 //         }
 //     }
 // }
+constexpr int iterations = 10000000;
 
 void generate_data(std::span<int> data)
 {

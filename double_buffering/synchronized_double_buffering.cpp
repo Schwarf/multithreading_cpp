@@ -14,7 +14,6 @@ int main()
     data2.resize(1 << 6);
     std::binary_semaphore signal_start_processing_data{0};
     std::binary_semaphore signal_start_generating_data{1};
-    constexpr int iterations{10000000};
     auto data_generator = [&]()
     {
         for(int i{}; i < iterations; ++i)
